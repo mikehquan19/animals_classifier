@@ -45,7 +45,7 @@ if __name__ == "__main__":
     classifier = ResNet101Classifier()
     classifier.to(torch.device('cuda'))
     # load the pre-trained weight the model 
-    classifier.load_state_dict(torch.load('./animals_weight2', weights_only=True))
+    classifier.load_state_dict(torch.load('./animals_checkpoint')["model"])
 
     img_url = "https://i.natgeofe.com/n/e0e24f3a-cef0-4499-b8d1-cdef05e6c4f4/NationalGeographic_1418626_3x2.jpg"
     print(predict(classifier, img_url))
