@@ -13,8 +13,8 @@ class SmallerResBlock(nn.Module):
             raise Exception("Number of resblock's strides should be 1 or 2")
         
         # Pre-skip
-        self.conv1 = nn.Conv2d(in_channels, out_channels, kernel_size=3, stride=stride)
-        self.conv2 = nn.Conv2d(out_channels, out_channels, kernel_size=3)
+        self.conv1 = nn.Conv2d(in_channels, out_channels, kernel_size=3, stride=stride, bias=False)
+        self.conv2 = nn.Conv2d(out_channels, out_channels, kernel_size=3, bias=False)
 
         # Batch normalization 
         self.batch_norm1 = nn.BatchNorm2d(num_features=out_channels)
@@ -25,7 +25,7 @@ class SmallerResBlock(nn.Module):
         if in_channels != out_channels: 
             # Downsample includes both convolution and batch norm 
             self.downsample = nn.Sequential(
-                nn.Conv2d(in_channels, out_channels, 1, stride), 
+                nn.Conv2d(in_channels, out_channels, 1, stride, bias=False), 
                 nn.BatchNorm2d(num_features=out_channels)
             )
 
@@ -55,26 +55,26 @@ class SmallerResNet(nn.Module):
 
         # conv1 layer: 7x7 convolutional layer with stride 2
         self.conv1 = nn.Sequential(
-            nn.Conv2d(3, output_channels, kernel_size=7, stride=2, padding=3),
+            nn.Conv2d(3, output_channels, kernel_size=7, stride=2, padding=3, bias=False),
             nn.BatchNorm2d(num_features=output_channels), 
             nn.ReLU(),
         )
 
-        for index1, num_blocks in enumerate(num_blocks_list): 
+        for i1, num_blocks in enumerate(num_blocks_list): 
             conv_blocks = [] 
 
             # max pool for the first set of residual blocks
-            if index1 == 0: 
+            if i1 == 0: 
                 conv_blocks.append(nn.MaxPool2d(kernel_size=3, stride=2, padding=1))
 
-            for index2 in range(num_blocks): 
+            for i2 in range(num_blocks): 
                 # first blocks's stride is 2 to reduce the input size by factor 2
-                stride = 2 if index2 == 0 and index1 != 0 else 1
+                stride = 2 if i2 == 0 and i1 != 0 else 1
                 # add block to the set of blocks 
                 conv_blocks.append(SmallerResBlock(input_channels, output_channels, stride))
 
             # initialize the set of residual blocks 
-            setattr(self, f"conv{index1 + 2}_blocks", nn.Sequential(*conv_blocks))
+            setattr(self, f"conv{i1 + 2}_blocks", nn.Sequential(*conv_blocks))
             output_channels *= 2 
         
         # fully-connected layer 
@@ -118,13 +118,13 @@ class LargerResBlock(nn.Module):
         
         # pre skip-connection convolutional block 
         self.conv_block1 = nn.Sequential(
-            nn.Conv2d(in_channels, out_channels, kernel_size=1, stride=stride), 
+            nn.Conv2d(in_channels, out_channels, kernel_size=1, stride=stride, bias=False), 
             nn.BatchNorm2d(num_features=out_channels),
             nn.ReLU(),
         )
 
         self.conv_block2 = nn.Sequential(
-            nn.Conv2d(out_channels, out_channels, kernel_size=3, padding=1),
+            nn.Conv2d(out_channels, out_channels, kernel_size=3, padding=1, bias=False),
             nn.BatchNorm2d(num_features=out_channels), 
             nn.ReLU(),
         )
@@ -138,7 +138,7 @@ class LargerResBlock(nn.Module):
         self.downsample = None
         if in_channels != out_channels * 4:
             self.downsample = nn.Sequential(
-                nn.Conv2d(in_channels, out_channels * 4, 1, stride), 
+                nn.Conv2d(in_channels, out_channels * 4, 1, stride, bias=False), 
                 nn.BatchNorm2d(num_features=out_channels * 4)
             )
 
@@ -169,7 +169,7 @@ class LargerResNet(nn.Module):
 
         # conv1 layer: 7x7 convolutional layer with stride 2
         self.conv1 = nn.Sequential(
-            nn.Conv2d(3, output_channels, kernel_size=7, stride=2, padding=3),
+            nn.Conv2d(3, output_channels, kernel_size=7, stride=2, padding=3, bias=False),
             nn.BatchNorm2d(num_features=output_channels), 
             nn.ReLU(),
         )
@@ -181,22 +181,22 @@ class LargerResNet(nn.Module):
         conv5 blocks: reblocks from 512 -> 2048
         """
 
-        for index1, num_blocks in enumerate(num_blocks_list):
+        for ix1, num_blocks in enumerate(num_blocks_list):
             conv_blocks = []
-            if index1 == 0:
+            if ix1 == 0:
                 # max pool for the first set of residual blocks
                 conv_blocks.append(nn.MaxPool2d(kernel_size=3, stride=2, padding=1))
 
-            for index2 in range(num_blocks):
+            for ix2 in range(num_blocks):
                 # first block's stride is 2 to reduce the input size by factor of 2
-                this_stride = 2 if (index1 != 0 and index2 == 0) else 1
+                this_stride = 2 if (ix1 != 0 and ix2 == 0) else 1
                 # input channels of the second block to final block
-                if index2 != 0: input_channels = output_channels * 4
+                if ix2 != 0: input_channels = output_channels * 4
                 # add block to the set 
                 conv_blocks.append(LargerResBlock(input_channels, output_channels, this_stride))
 
             # initialize the set of residual blocks
-            setattr(self, f"conv{index1 + 2}_blocks", nn.Sequential(*conv_blocks))
+            setattr(self, f"conv{ix1 + 2}_blocks", nn.Sequential(*conv_blocks))
 
             # the number of channels for the next round
             output_channels *= 2
