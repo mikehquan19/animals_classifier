@@ -25,9 +25,8 @@ class SmallerResBlock(nn.Module):
         if in_channels != out_channels: 
             # Downsample includes both convolution and batch norm 
             self.downsample = nn.Sequential(
-                nn.Conv2d(in_channels, out_channels, 1, stride, bias=False), 
-                nn.BatchNorm2d(num_features=out_channels)
-            )
+                nn.Conv2d(in_channels, out_channels, kernel_size=1, stride=stride, bias=False), 
+                nn.BatchNorm2d(num_features=out_channels))
 
     def forward(self, x): 
         """ Return  """
@@ -57,8 +56,7 @@ class SmallerResNet(nn.Module):
         self.conv1 = nn.Sequential(
             nn.Conv2d(3, output_channels, kernel_size=7, stride=2, padding=3, bias=False),
             nn.BatchNorm2d(num_features=output_channels), 
-            nn.ReLU(),
-        )
+            nn.ReLU())
 
         for i1, num_blocks in enumerate(num_blocks_list): 
             conv_blocks = [] 
@@ -108,27 +106,23 @@ class LargerResBlock(nn.Module):
         self.conv_block1 = nn.Sequential(
             nn.Conv2d(in_channels, out_channels, kernel_size=1, stride=stride, bias=False), 
             nn.BatchNorm2d(num_features=out_channels),
-            nn.ReLU(),
-        )
+            nn.ReLU())
 
         self.conv_block2 = nn.Sequential(
             nn.Conv2d(out_channels, out_channels, kernel_size=3, padding=1, bias=False),
             nn.BatchNorm2d(num_features=out_channels), 
-            nn.ReLU(),
-        )
+            nn.ReLU())
 
         self.conv_block3 = nn.Sequential(
-            nn.Conv2d(out_channels, out_channels * 4, kernel_size=1),
-            nn.BatchNorm2d(num_features=out_channels * 4),
-        )
+            nn.Conv2d(out_channels, out_channels * 4, kernel_size=1, bias=False),
+            nn.BatchNorm2d(num_features=out_channels * 4))
 
         # Downsample 
         self.downsample = None
         if in_channels != out_channels * 4:
             self.downsample = nn.Sequential(
                 nn.Conv2d(in_channels, out_channels * 4, 1, stride, bias=False), 
-                nn.BatchNorm2d(num_features=out_channels * 4)
-            )
+                nn.BatchNorm2d(num_features=out_channels * 4))
 
     def forward(self, x):
         output = self.conv_block1(x)
@@ -159,14 +153,12 @@ class LargerResNet(nn.Module):
         self.conv1 = nn.Sequential(
             nn.Conv2d(3, output_channels, kernel_size=7, stride=2, padding=3, bias=False),
             nn.BatchNorm2d(num_features=output_channels), 
-            nn.ReLU(),
-        )
+            nn.ReLU())
 
         # conv2 blocks: 3x3 max-pool with stride 2, res-blocks 64 -> 256
         # conv3 blocks: resblocks from 128 -> 512
         # conv4 blocks: resblocks from 256 -> 1024
         # conv5 blocks: reblocks from 512 -> 2048
-
         for ix1, num_blocks in enumerate(num_blocks_list):
             conv_blocks = []
             if ix1 == 0:

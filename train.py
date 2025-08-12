@@ -23,9 +23,7 @@ def get_accuracy(arg_model: nn.Module, data_loader: DataLoader, arg_device: cuda
     return round((correct_prediction / total_prediction) * 100, 2)
 
 
-def mini_batch_training(
-    num_epochs, model, loss_fn, optimizer, scheduler, train_data_loader, val_data_loader
-):
+def mini_batch_training(num_epochs, model, loss_fn, optimizer, scheduler, train_data_loader, val_data_loader):
     """ Training loop over the minibatches of the dataset """
     
     device = torch.device("cuda") if cuda.is_available() else torch.device("cpu")
@@ -38,7 +36,7 @@ def mini_batch_training(
         # compute the train loss
         model.train() # switch the model to train mode
         for imgs, labels in train_data_loader:
-            # make sure the imgs and the labels
+            # make sure the imgs and the labels are converted to be used by right device 
             imgs, labels = imgs.to(device), labels.to(device)
 
             # forward phase
@@ -96,14 +94,15 @@ if __name__ == "__main__":
 
     # initialize the model 
     animal_classifier = ResNet101Classifier().to(
-        torch.device("cuda") if cuda.is_available() else torch.device("cpu")
-    )
+        torch.device("cuda") if cuda.is_available() else torch.device("cpu"))
+    
     # use ADAM to auto update the learning rate
     this_optimizer = optim.AdamW(animal_classifier.parameters(), lr=LEARNING_RATE, weight_decay=WEIGTH_DECAY)
     this_scheduler = optim.lr_scheduler.CosineAnnealingLR(this_optimizer, T_max=TOTAL_NUM_EPOCHS)
 
     # Load the weights as well as state of model and optimizer and scheduler 
     checkpoint = torch.load('./animals_checkpoint.tph')
+
     animal_classifier.load_state_dict(checkpoint['model'])
     this_optimizer.load_state_dict(checkpoint['optimizer'])
     this_scheduler.load_state_dict(checkpoint['scheduler'])
@@ -121,13 +120,8 @@ if __name__ == "__main__":
     )
 
     # You can do something with train_track & val_track, like graphing them
-    """
     # Optional, checking the accuracy 
-    print(
-        get_accuracy(animal_classifier, train_loader),
-        get_accuracy(animal_classifier, val_loader)
-    )
-    """
+    print(get_accuracy(animal_classifier, train_loader), get_accuracy(animal_classifier, val_loader))
     # save the model's weight to the file 
     torch.save({
         "model": animal_classifier.state_dict(),
