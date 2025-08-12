@@ -68,8 +68,8 @@ class SmallerResNet(nn.Module):
                 conv_blocks.append(nn.MaxPool2d(kernel_size=3, stride=2, padding=1))
 
             for i2 in range(num_blocks): 
-                # first blocks's stride is 2 to reduce the input size by factor 2
-                stride = 2 if i2 == 0 and i1 != 0 else 1
+                # first block's stride is 2 to reduce the input size by factor 2
+                stride = 2 if (i2 == 0 and i1 != 0) else 1
                 # add block to the set of blocks 
                 conv_blocks.append(SmallerResBlock(input_channels, output_channels, stride))
 
@@ -94,18 +94,6 @@ class SmallerResNet(nn.Module):
         output = output.view(output.size(0), -1)
         return self.fc(output)
     
-
-class ResNet18Classifier(SmallerResBlock): 
-    # 18-layer ResNet 
-    def __init__(self):
-        super().__init__(num_blocks_list=[2, 2, 2, 2])
-
-
-class ResNet34Classifier(SmallerResBlock): 
-    # 34-layer ResNet 
-    def __init__(self):
-        super().__init__(num_blocks_list=[3, 4, 6, 3])
-
 
 class LargerResBlock(nn.Module):
     """
@@ -174,12 +162,10 @@ class LargerResNet(nn.Module):
             nn.ReLU(),
         )
 
-        """
-        conv2 blocks: 3x3 max-pool with stride 2, resblocks 64 -> 256
-        conv3 blocks: resblocks from 128 -> 512
-        conv4 blocks: resblocks from 256 -> 1024
-        conv5 blocks: reblocks from 512 -> 2048
-        """
+        # conv2 blocks: 3x3 max-pool with stride 2, res-blocks 64 -> 256
+        # conv3 blocks: resblocks from 128 -> 512
+        # conv4 blocks: resblocks from 256 -> 1024
+        # conv5 blocks: reblocks from 512 -> 2048
 
         for ix1, num_blocks in enumerate(num_blocks_list):
             conv_blocks = []
@@ -217,25 +203,37 @@ class LargerResNet(nn.Module):
         return self.fc(output)
     
 
+class ResNet18Classifier(SmallerResBlock): 
+    """ 18-layer ResNet """
+    def __init__(self):
+        super().__init__(num_blocks_list=[2, 2, 2, 2])
+
+
+class ResNet34Classifier(SmallerResBlock): 
+    """ 34-layer ResNet """
+    def __init__(self):
+        super().__init__(num_blocks_list=[3, 4, 6, 3])
+
+
 class ResNet50Classifier(LargerResNet): 
-    # 50-layer ResNet 
+    """ 50-layer ResNet """
     def __init__(self):
         super().__init__(num_blocks_list=[3, 4, 6, 3])
 
 
 class ResNet101Classifier(LargerResNet): 
-    # 101-layer ResNet 
+    """ 101-layer ResNet """
     def __init__(self):
         super().__init__(num_blocks_list=[3, 4, 23, 3])
 
 
 class ResNet152Classifier(LargerResNet): 
-    # 152-layer ResNet 
+    """ 152-layer ResNet """ 
     def __init__(self): 
         super().__init__(num_blocks_list=[3, 8, 36, 3])
 
 
-def main(): 
+if __name__ == "__main__": 
     # this is to check the architecture of the model 
     summary(
         model=ResNet101Classifier().to(
