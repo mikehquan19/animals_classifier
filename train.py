@@ -6,10 +6,9 @@ from model.resnet import ResNet101Classifier
 
 @torch.no_grad()
 def get_accuracy(arg_model: nn.Module, data_loader: DataLoader, arg_device: cuda.device) -> float:
-    """ 
-    Calculate the accuracy of the model given the data loader 
-    """
-    arg_model.eval() # changing the model to eval mode
+    """ Calculate the accuracy of the model given the data loader """
+
+    arg_model.eval() # Changing the model to eval mode
     correct_prediction, total_prediction = 0, 0
     for imgs, labels in data_loader:
         imgs, labels = imgs.to(arg_device), labels.to(arg_device)
@@ -25,7 +24,7 @@ def get_accuracy(arg_model: nn.Module, data_loader: DataLoader, arg_device: cuda
 
 
 def mini_batch_training(
-    num_epochs: int, model: nn.Module, loss_fn, optimizer, train_data_loader, val_data_loader
+    num_epochs, model, loss_fn, optimizer, scheduler, train_data_loader, val_data_loader
 ):
     """ Training loop over the minibatches of the dataset """
     
@@ -50,12 +49,13 @@ def mini_batch_training(
             optimizer.zero_grad()
             train_loss.backward() # calculate and accumulate the current gradient
             optimizer.step()
-
             avg_train_loss += train_loss.item()
     
         # compute train loss 
         avg_train_loss = round(avg_train_loss / len(train_data_loader), 4)
         train_losses.append(avg_train_loss)
+
+        scheduler.step() # Update the LR with the scheduler.
 
         # compute the val loss, turn off the autograd 
         with torch.no_grad():
@@ -80,32 +80,42 @@ def mini_batch_training(
 
 if __name__ == "__main__":
     # Hyper-parameters
-    LEARNING_RATE = 1e-3
-    NUM_EPOCHS = 50 # adjust as needed, recommended as high as 100
-    BATCH_SIZE = 128 # adjust as needed 
+    LEARNING_RATE = 1e-4
+    WEIGTH_DECAY = 1e-4
+    TOTAL_NUM_EPOCHS = 120 # adjust as needed, recommended as high as 100
+    NUM_EPOCHS_EACH_TIME = 50
+    BATCH_SIZE = 64 # adjust as needed 
 
     # initialize the dataset 
     train_dataset = AnimalImages("/content/animals10/raw-img", 224)
     val_dataset = AnimalImages("/content/animals10/raw-img", 224, train=False)
 
     # data loader of the dataset
-    train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True, num_workers=4)
-    val_loader = DataLoader(val_dataset, batch_size=BATCH_SIZE, shuffle=False, num_workers=4)
+    train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True, num_workers=2)
+    val_loader = DataLoader(val_dataset, batch_size=BATCH_SIZE, shuffle=False, num_workers=2)
 
     # initialize the model 
     animal_classifier = ResNet101Classifier().to(
         torch.device("cuda") if cuda.is_available() else torch.device("cpu")
     )
     # use ADAM to auto update the learning rate
-    this_optimizer = optim.Adam(animal_classifier.parameters(), lr=LEARNING_RATE)
+    this_optimizer = optim.AdamW(animal_classifier.parameters(), lr=LEARNING_RATE, weight_decay=WEIGTH_DECAY)
+    this_scheduler = optim.lr_scheduler.CosineAnnealingLR(this_optimizer, T_max=TOTAL_NUM_EPOCHS)
+
+    # Load the weights as well as state of model and optimizer and scheduler 
+    checkpoint = torch.load('./animals_checkpoint.tph')
+    animal_classifier.load_state_dict(checkpoint['model'])
+    this_optimizer.load_state_dict(checkpoint['optimizer'])
+    this_scheduler.load_state_dict(checkpoint['scheduler'])
 
     # train the model
     torch.cuda.empty_cache() 
     train_track, val_track = mini_batch_training(
-        num_epochs=NUM_EPOCHS, 
+        num_epochs=NUM_EPOCHS_EACH_TIME, 
         model=animal_classifier,
         loss_fn=nn.CrossEntropyLoss(), 
         optimizer=this_optimizer,
+        scheduler=this_scheduler,
         train_data_loader=train_loader, 
         val_data_loader=val_loader
     )
@@ -119,4 +129,8 @@ if __name__ == "__main__":
     )
     """
     # save the model's weight to the file 
-    torch.save(animal_classifier.state_dict(), './animals_weight2')
+    torch.save({
+        "model": animal_classifier.state_dict(),
+        "optimizer": this_optimizer.state_dict(),
+        "scheduler": this_scheduler.state_dict()
+    }, './animals_checkpoint.tph')
