@@ -19,17 +19,17 @@ class ConvBlock(nn.Module):
 
         # Convolutional layer along with batch normalization 
         self.conv1 = nn.Sequential(
-            nn.Conv2d(in_channels, out_channels, kernel_size=3, padding=1),
+            nn.Conv2d(in_channels, out_channels, kernel_size=3, padding=1, bias=False),
             nn.BatchNorm2d(num_features=out_channels),
             nn.ReLU(),
         )
         self.conv2 = nn.Sequential(
-            nn.Conv2d(out_channels, out_channels, kernel_size=3, padding=1),
+            nn.Conv2d(out_channels, out_channels, kernel_size=3, padding=1, bias=False),
             nn.BatchNorm2d(num_features=out_channels), 
             nn.ReLU(),
         )
         self.conv3 = nn.Sequential(
-            nn.Conv2d(out_channels, out_channels, kernel_size=3, padding=1), 
+            nn.Conv2d(out_channels, out_channels, kernel_size=3, padding=1, bias=False), 
             nn.BatchNorm2d(num_features=out_channels),
             nn.ReLU(),
         )
