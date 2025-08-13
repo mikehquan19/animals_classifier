@@ -6,11 +6,13 @@ from torchvision.transforms import v2
 import torch
 from torch.nn import Module
 from dataset import idx_to_label
-from model.resnet import ResNet101Classifier
+from model.resnet import ResNet50Classifier
 
 
 def predict(arg_model: Module, arg_img_url: str) -> str:
     arg_model.eval()
+
+    # Load the image
     response = requests.get(arg_img_url)
     img = Image.open(BytesIO(response.content))
 
@@ -24,9 +26,8 @@ def predict(arg_model: Module, arg_img_url: str) -> str:
         v2.ToDtype(torch.float32, scale=True),
         v2.Normalize(
             # the value of mean and stdev of normalization
-            mean=[0.5200, 0.5028, 0.4161],
-            std=[0.2667, 0.2623, 0.2798]
-        )
+            mean=[0.5204, 0.5028, 0.4156],
+            std=[0.2667, 0.2621, 0.2797])
     ])
 
     # Show the image
@@ -42,10 +43,10 @@ def predict(arg_model: Module, arg_img_url: str) -> str:
 
 if __name__ == "__main__": 
     # initialize the model 
-    classifier = ResNet101Classifier()
+    classifier = ResNet50Classifier()
     classifier.to(torch.device('cuda'))
     # load the pre-trained weight the model 
-    classifier.load_state_dict(torch.load('./animals_checkpoint')["model"])
+    classifier.load_state_dict(torch.load('./data/animals_checkpoint')["model"])
 
     img_url = "https://i.natgeofe.com/n/e0e24f3a-cef0-4499-b8d1-cdef05e6c4f4/NationalGeographic_1418626_3x2.jpg"
     print(predict(classifier, img_url))

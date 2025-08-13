@@ -6,13 +6,8 @@ from torchvision.transforms import v2
 from PIL import Image
 from pathlib import Path
 
-label_to_idx = {
-    "cane": 0, "cavallo": 1, "elefante": 2, "farfalla": 3, "gallina": 4, "gatto": 5, "mucca": 6, "pecora": 7, "ragno": 8, "scoiattolo": 9
-}
-
-idx_to_label = {
-    0: "dog", 1: "horse", 2: "elephant", 3: "butterfly", 4: "hen", 5: "cat", 6: "cow", 7: "sheep", 8: "spider", 9: "squirrel"
-}
+label_to_idx = {"cane": 0, "cavallo": 1, "elefante": 2, "farfalla": 3, "gallina": 4, "gatto": 5, "mucca": 6, "pecora": 7, "ragno": 8, "scoiattolo": 9}
+idx_to_label = {0: "dog", 1: "horse", 2: "elephant", 3: "butterfly", 4: "hen", 5: "cat", 6: "cow", 7: "sheep", 8: "spider", 9: "squirrel"}
 
 class AnimalImages(Dataset):
     """ Dataset of the animal's images """
@@ -39,12 +34,42 @@ class AnimalImages(Dataset):
             for img_extension in ["jpeg", "png", "jpg"]:
                 img_path_list.extend(glob.glob(f"{class_path}/*.{img_extension}"))
 
-            split = round(0.8 * len(img_path_list))
+            split = round(0.85 * len(img_path_list))
             img_path_list = img_path_list[:split] if train else img_path_list[split:]
 
             for img_path in img_path_list:
                 # the tuple of path to the image and label of that image
                 self.data.append([img_path, label])
+
+        if self.train: random.shuffle(self.data)
+
+        # image transform that applies augmentation 
+        self.augmentation_transform = v2.Compose([
+            v2.Resize([self.img_size, self.img_size]),
+            v2.RandomResizedCrop(
+                size=self.img_size, scale=(0.8, 1.2), ratio=(0.8, 1.2)),
+            v2.ColorJitter(brightness=0.1, contrast=0.2, saturation=0.2, hue=0.1),
+            v2.RandomHorizontalFlip(),
+            v2.RandomRotation(45), # apply rotation
+            v2.ToImage(),
+            v2.ToDtype(torch.float32, scale=True),
+            v2.Normalize(
+                # The value of mean and stdev of normalization
+                mean=[0.5204, 0.5028, 0.4156],
+                std=[0.2667, 0.2621, 0.2797])
+        ])
+
+        # image transform that doesn't apply augmentation
+        self.no_augmentation_transform = v2.Compose([
+            v2.Resize((self.img_size, self.img_size)),
+            v2.ToImage(),
+            v2.ToDtype(torch.float32, scale=True),
+            v2.Normalize(
+                # The value of mean and stdev of normalization
+                mean=[0.5204, 0.5028, 0.4156],
+                std=[0.2667, 0.2621, 0.2797]
+            )
+        ])
 
 
     def __len__(self):
@@ -64,34 +89,7 @@ class AnimalImages(Dataset):
 
         # Resize, randomly augment the data, and tensorize them
         # depending on the type of dataset
-        if self.train:
-            resize_transform = v2.Compose([
-                v2.Resize([self.img_size, self.img_size]),
-                v2.RandomResizedCrop(
-                    size=self.img_size, scale=(0.6, 1.0), ratio=(0.85, 1.15)
-                ),
-                v2.RandomHorizontalFlip(),
-                v2.RandomVerticalFlip(0.05), # apply vertical flip once in a blue moon def doesn't hurt
-                v2.ToImage(),
-                v2.ToDtype(torch.float32, scale=True),
-                v2.Normalize(
-                    # The value of mean and stdev of normalization
-                    mean=[0.5200, 0.5028, 0.4161],
-                    std=[0.2667, 0.2623, 0.2798]
-                )
-            ])
-        else:
-            # Don't apply random augmentation on val images 
-            resize_transform = v2.Compose([
-                v2.Resize([self.img_size, self.img_size]),
-                v2.ToImage(),
-                v2.ToDtype(torch.float32, scale=True),
-                v2.Normalize(
-                    # The value of mean and stdev of normalization
-                    mean=[0.5200, 0.5028, 0.4161],
-                    std=[0.2667, 0.2623, 0.2798]
-                )
-            ])
+        resize_transform = self.augmentation_transform if self.train else self.no_augmentation_transform
 
         # Process the images and the labels
         processed_img = resize_transform(img)
