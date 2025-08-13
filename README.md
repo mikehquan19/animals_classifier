@@ -3,4 +3,6 @@ This is a set of classification models (VGG, Resnet) trained on [Animals-10](htt
 
 It's still in progress as I'm still currently training the models. Weights for Resnet-101 and VGG-16 will be out soon. 
 
+Resnet-50 achieves the 80.7% val acc
+
 This project primarily uses <strong>Pytorch</strong>.
