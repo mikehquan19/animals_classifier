@@ -1,6 +1,6 @@
 import requests
 from PIL import Image
-from matplotlib import pyplot as plt
+# from matplotlib import pyplot as plt
 from io import BytesIO
 from torchvision.transforms import v2
 import torch
@@ -29,26 +29,28 @@ def predict(arg_model: Module, arg_img_url: str) -> str:
             mean=[0.5204, 0.5028, 0.4156],
             std=[0.2667, 0.2621, 0.2797])
     ])
+    img_tensor = resize_transform(img)
 
     # Show the image
-    img_tensor = resize_transform(img)
+    """
     plt.imshow(img_tensor.permute(1, 2, 0))
     plt.show()
+    """
 
-    img_tensor = img_tensor.unsqueeze(0).to(torch.device('cuda'))
+    img_tensor = img_tensor.unsqueeze(0).to(
+        torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu"))
     _, predicted = torch.max(arg_model(img_tensor), dim=1)
 
     return idx_to_label[int(predicted.item())]
 
 
 if __name__ == "__main__": 
-    # initialize the model 
-    classifier = ResNet50Classifier()
-    classifier.to(torch.device('cuda'))
-    # load the pre-trained weight the model 
-    classifier.load_state_dict(torch.load('./data/animals_checkpoint')["model"])
+    # initialize the model and load the pre-trained weight 
+    device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+    animals_classifier = ResNet50Classifier().to(device=device)
+    animals_classifier.load_state_dict(torch.load('./data/animals_checkpoint.tph', map_location=device)["model"])
 
-    img_url = "https://i.natgeofe.com/n/e0e24f3a-cef0-4499-b8d1-cdef05e6c4f4/NationalGeographic_1418626_3x2.jpg"
-    print(predict(classifier, img_url))
+    img_url = "https://wallup.net/wp-content/uploads/2018/10/06/364377-puppies-puppy-baby-dog-dogs-41.jpg"
+    print(predict(animals_classifier, img_url))
 
 
