@@ -9,12 +9,12 @@ class SmallerResBlock(nn.Module):
     Architecture of the residual block used for smaller ResNet
 
     The resblocks (```in_channels -> out_channels```) consists of: 
-        - convolution layer: ```in_channels -> out_channels```, 
-        - convolution layer: ```out_channels -> out_channels```, 
+        - Convolution layer: ```in_channels -> out_channels```, 
+        - Convolution layer: ```out_channels -> out_channels```, 
 
     For example, 
-        - resblock 64 -> 128, ```in_channels = 64``` & ```out_channels = 128```
-        - resblock 512 -> 512, ```in_channels = 512``` & ```out_channels = 512```
+        - Resblock 64 -> 128, ```in_channels = 64``` & ```out_channels = 128```
+        - Resblock 512 -> 512, ```in_channels = 512``` & ```out_channels = 512```
 
     Args: 
         in_channels (int): Channels of the image tensor before passing through the resblock.
@@ -59,12 +59,11 @@ class SmallerResBlock(nn.Module):
 class SmallerResNet(nn.Module): 
     """
     Generic architecture of the model classifying animals' images, based on ResNet 
-    Only apply from 18 -> 34 layers 
+    Only apply from Resnet-18 & Resnet-34
     """
     def __init__(self, num_blocks_list):
         super(SmallerResNet, self).__init__()
-
-        # Non-properties, used for constructing convolution blocks
+        # Non-properties, used for constructing blocks
         input_channels, output_channels = 64, 64
 
         # conv1 layer: 7x7 convolutional layer with stride 2
@@ -116,14 +115,14 @@ class LargerResBlock(nn.Module):
     Architecture of the residual block. The first residual block in ResNet has stride of 2. 
 
     The resblocks (```in_channels -> out_channels * 4```) consists of: 
-        - convolution layer: ```in_channels -> out_channels```, 
-        - convolution layer: ```out_channels -> out_channels```, 
-        - convolution layer: ```out_channels -> out_channels * 4```
+        - Convolution layer: ```in_channels -> out_channels```, 
+        - Convolution layer: ```out_channels -> out_channels```, 
+        - Convolution layer: ```out_channels -> out_channels * 4```
 
     For example, 
-        - resblock 64 -> 256, ```in_channels = 64``` & ```out_channels = 64```
-        - resblock 512 -> 1024, ```in_channels = 512``` & ```out_channels = 256```
-        - resblock 512 -> 512, ```in_channels = 512``` & ```out_channels = 128```
+        - Resblock 64 -> 256, ```in_channels = 64``` & ```out_channels = 64```
+        - Resblock 512 -> 1024, ```in_channels = 512``` & ```out_channels = 256```
+        - Resblock 512 -> 512, ```in_channels = 512``` & ```out_channels = 128```
 
     Args: 
         in_channels (int): Channels of the image tensor before passing through the resblock.
@@ -173,12 +172,11 @@ class LargerResBlock(nn.Module):
 class LargerResNet(nn.Module):
     """
     Generic architecture of the model classifying animals' images, based on ResNet 
-    Only apply from 50 -> 152 layers 
+    Only apply for Resnet50, Resnet101, & Resnet152 
     """
     
     def __init__(self, num_blocks_list):
         super(LargerResNet, self).__init__()
-
         # Non-properties used for building blocks, initial input and output channels is 64
         input_channels, output_channels = 64, 64
 
@@ -208,7 +206,6 @@ class LargerResNet(nn.Module):
 
             # initialize the set of residual blocks
             setattr(self, f"conv{ix1 + 2}_blocks", nn.Sequential(*conv_blocks))
-
             # the number of output channels for the next set of resblocks 
             output_channels *= 2
 
