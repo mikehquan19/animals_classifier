@@ -53,7 +53,7 @@ def mini_batch_training(num_epochs, model, loss_fn, optimizer, scheduler, train_
             avg_train_loss += train_loss.item()
             if scheduler: 
                 # The user has an option of not using scheduler to train 
-                scheduler.step(epoch + batch_ix / len(train_data_loader)) # updates the LR every batch
+                scheduler.step(epoch + batch_ix / len(train_data_loader)) # updates the global LR every batch
     
         # compute train loss 
         avg_train_loss = round(avg_train_loss / len(train_data_loader), 4)
@@ -106,7 +106,7 @@ if __name__ == "__main__":
     # use ADAMW to auto update the learning rate
     this_optimizer = optim.AdamW(animal_classifier.parameters(), lr=LEARNING_RATE, weight_decay=WEIGTH_DECAY)
 
-    # Scheduler to scheduler the global learning rate periodically
+    # Scheduler to schedule the global learning rate update periodically
     this_scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(
         this_optimizer,
         T_0=NUM_EPOCHS_EACH_CYCLE, # every cycle is 30 epochs, the scheduler restarts lr
