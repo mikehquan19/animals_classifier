@@ -91,8 +91,8 @@ if __name__ == "__main__":
     FIRST_ITERATION = True # used in case you resume training
 
     # initialize the dataset 
-    train_dataset = AnimalImages("/content/animals10/raw-img", 224)
-    val_dataset = AnimalImages("/content/animals10/raw-img", 224, train=False)
+    train_dataset = AnimalImages("./data/animals10/raw-img", 224)
+    val_dataset = AnimalImages("./data/animals10/raw-img", 224, train=False)
     assert len(train_dataset) + len(val_dataset) == 26179
 
     # data loader of the dataset
