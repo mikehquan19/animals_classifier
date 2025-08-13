@@ -17,7 +17,7 @@ class SmallerResBlock(nn.Module):
         - Resblock 512 -> 512, ```in_channels = 512``` & ```out_channels = 512```
 
     Args: 
-        in_channels (int): Channels of the image tensor before passing through the resblock.
+        in_channels (int): Channels of the image tensor before feeding it through the resblock.
         out_channels (int): Channels of image tensor after first convolution layer of the block.
         stride (int): Stride for first convolution layer of the block
     """
@@ -83,8 +83,10 @@ class SmallerResNet(nn.Module):
                 conv_blocks.append(nn.MaxPool2d(kernel_size=3, stride=2, padding=1))
 
             for ix2 in range(num_blocks): 
-                # first block's stride is 2 to reduce the input size by factor of 2 (except for first set)
+                # every set except the first, first block's stride is 2 to reduce the input size by factor of 2
                 stride = 2 if (ix2 == 0 and ix1 != 0) else 1
+                # input channels starting from the second block to final block
+                if ix2 == 1: input_channels = output_channels
                 # add block to the set of blocks 
                 conv_blocks.append(SmallerResBlock(input_channels, output_channels, stride))
 
@@ -114,7 +116,7 @@ class LargerResBlock(nn.Module):
     """
     Architecture of the residual block. The first residual block in ResNet has stride of 2. 
 
-    The resblocks (```in_channels -> out_channels * 4```) consists of: 
+    The resblock (```in_channels -> out_channels * 4```) consists of: 
         - Convolution layer: ```in_channels -> out_channels```, 
         - Convolution layer: ```out_channels -> out_channels```, 
         - Convolution layer: ```out_channels -> out_channels * 4```
@@ -125,7 +127,7 @@ class LargerResBlock(nn.Module):
         - Resblock 512 -> 512, ```in_channels = 512``` & ```out_channels = 128```
 
     Args: 
-        in_channels (int): Channels of the image tensor before passing through the resblock.
+        in_channels (int): Channels of the image tensor before feeding it through the resblock.
         out_channels (int): Channels of image tensor after first convolution layer of the block.
         stride (int): Stride for first convolution layer of the block
     """
@@ -197,7 +199,7 @@ class LargerResNet(nn.Module):
                 conv_blocks.append(nn.MaxPool2d(kernel_size=3, stride=2, padding=1))
 
             for ix2 in range(num_blocks):
-                # first block's stride is 2 to reduce the input size by factor of 2 (except first set)
+                # every set except the first, first block's stride is 2 to reduce the input size by factor of 2
                 this_stride = 2 if (ix1 != 0 and ix2 == 0) else 1
                 # input channels starting from the second block to final block
                 if ix2 == 1: input_channels = output_channels * 4
@@ -210,7 +212,7 @@ class LargerResNet(nn.Module):
             output_channels *= 2
 
         # 1 fully-connected layer
-        self.fc = nn.Linear(output_channels * 2, 10)
+        self.fc = nn.Linear(input_channels, 10)
 
     def forward(self, x):
         # Feed the image to all convolutional layers
