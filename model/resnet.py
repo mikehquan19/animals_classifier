@@ -5,16 +5,31 @@ from torch.nn import functional as F
 from torchsummary import summary
 
 class SmallerResBlock(nn.Module): 
-    """ Architecture of the residual block used for smaller ResNet """
+    """ 
+    Architecture of the residual block used for smaller ResNet
+
+    The resblocks (```in_channels -> out_channels```) consists of: 
+        - convolution layer: ```in_channels -> out_channels```, 
+        - convolution layer: ```out_channels -> out_channels```, 
+
+    For example, 
+        - resblock 64 -> 128, ```in_channels = 64``` & ```out_channels = 128```
+        - resblock 512 -> 512, ```in_channels = 512``` & ```out_channels = 512```
+
+    Args: 
+        in_channels (int): Channels of the image tensor before passing through the resblock.
+        out_channels (int): Channels of image tensor after first convolution layer of the block.
+        stride (int): Stride for first convolution layer of the block
+    """
     
-    def __init__(self, in_channels: int, out_channels: int, stride):
+    def __init__(self, in_channels: int, out_channels: int, stride: int):
         super(SmallerResBlock, self).__init__()
         if stride != 1 and stride != 2: 
             raise Exception("Number of resblock's strides should be 1 or 2")
         
         # Pre-skip
-        self.conv1 = nn.Conv2d(in_channels, out_channels, kernel_size=3, stride=stride, bias=False)
-        self.conv2 = nn.Conv2d(out_channels, out_channels, kernel_size=3, bias=False)
+        self.conv1 = nn.Conv2d(in_channels, out_channels, kernel_size=3, padding=1, stride=stride, bias=False)
+        self.conv2 = nn.Conv2d(out_channels, out_channels, kernel_size=3, padding=1, bias=False)
 
         # Batch normalization 
         self.batch_norm1 = nn.BatchNorm2d(num_features=out_channels)
@@ -49,8 +64,8 @@ class SmallerResNet(nn.Module):
     def __init__(self, num_blocks_list):
         super(SmallerResNet, self).__init__()
 
-        input_channels = 64 
-        output_channels = 64 
+        # Non-properties, used for constructing convolution blocks
+        input_channels, output_channels = 64, 64
 
         # conv1 layer: 7x7 convolutional layer with stride 2
         self.conv1 = nn.Sequential(
@@ -58,28 +73,31 @@ class SmallerResNet(nn.Module):
             nn.BatchNorm2d(num_features=output_channels), 
             nn.ReLU())
 
-        for i1, num_blocks in enumerate(num_blocks_list): 
+        # conv2 blocks: 3x3 max-pool with stride 2, smaller resblocks 64 -> 64
+        # conv3 blocks: smaller resblocks from 64 -> 128 & 128 -> 128
+        # conv4 blocks: smaller resblocks from 128 -> 256 & 256 -> 256
+        # conv5 blocks: smaller resblocks from 256 -> 512 & 512 -> 512
+        for ix1, num_blocks in enumerate(num_blocks_list): 
             conv_blocks = [] 
-
             # max pool for the first set of residual blocks
-            if i1 == 0: 
+            if ix1 == 0: 
                 conv_blocks.append(nn.MaxPool2d(kernel_size=3, stride=2, padding=1))
 
-            for i2 in range(num_blocks): 
-                # first block's stride is 2 to reduce the input size by factor 2
-                stride = 2 if (i2 == 0 and i1 != 0) else 1
+            for ix2 in range(num_blocks): 
+                # first block's stride is 2 to reduce the input size by factor of 2 (except for first set)
+                stride = 2 if (ix2 == 0 and ix1 != 0) else 1
                 # add block to the set of blocks 
                 conv_blocks.append(SmallerResBlock(input_channels, output_channels, stride))
 
             # initialize the set of residual blocks 
-            setattr(self, f"conv{i1 + 2}_blocks", nn.Sequential(*conv_blocks))
-            output_channels *= 2 
+            setattr(self, f"conv{ix1 + 2}_blocks", nn.Sequential(*conv_blocks))
+            output_channels *= 2 # output channels for the next set of blocks 
         
         # fully-connected layer 
-        self.fc = nn.Linear(output_channels * 2, 10)
+        self.fc = nn.Linear(input_channels, 10)
 
 
-    def foward(self, x): 
+    def forward(self, x): 
         output = F.dropout2d(self.conv1(x), p=0.2)
         output = self.conv2_blocks(output)
         output = self.conv3_blocks(output)
@@ -95,8 +113,24 @@ class SmallerResNet(nn.Module):
 
 class LargerResBlock(nn.Module):
     """
-    Architecture of the residual block. The first residual block in ResNet has stride of 2
+    Architecture of the residual block. The first residual block in ResNet has stride of 2. 
+
+    The resblocks (```in_channels -> out_channels * 4```) consists of: 
+        - convolution layer: ```in_channels -> out_channels```, 
+        - convolution layer: ```out_channels -> out_channels```, 
+        - convolution layer: ```out_channels -> out_channels * 4```
+
+    For example, 
+        - resblock 64 -> 256, ```in_channels = 64``` & ```out_channels = 64```
+        - resblock 512 -> 1024, ```in_channels = 512``` & ```out_channels = 256```
+        - resblock 512 -> 512, ```in_channels = 512``` & ```out_channels = 128```
+
+    Args: 
+        in_channels (int): Channels of the image tensor before passing through the resblock.
+        out_channels (int): Channels of image tensor after first convolution layer of the block.
+        stride (int): Stride for first convolution layer of the block
     """
+
     def __init__(self, in_channels, out_channels, stride=1):
         super(LargerResBlock, self).__init__()
         if stride != 1 and stride != 2:
@@ -145,9 +179,8 @@ class LargerResNet(nn.Module):
     def __init__(self, num_blocks_list):
         super(LargerResNet, self).__init__()
 
-        # initial input and output channels is 64
-        input_channels = 64
-        output_channels = 64 
+        # Non-properties used for building blocks, initial input and output channels is 64
+        input_channels, output_channels = 64, 64
 
         # conv1 layer: 7x7 convolutional layer with stride 2
         self.conv1 = nn.Sequential(
@@ -155,10 +188,10 @@ class LargerResNet(nn.Module):
             nn.BatchNorm2d(num_features=output_channels), 
             nn.ReLU())
 
-        # conv2 blocks: 3x3 max-pool with stride 2, res-blocks 64 -> 256
-        # conv3 blocks: resblocks from 128 -> 512
-        # conv4 blocks: resblocks from 256 -> 1024
-        # conv5 blocks: reblocks from 512 -> 2048
+        # conv2 blocks: 3x3 max-pool with stride 2, larger resblocks 64 -> 256 & 256 -> 256
+        # conv3 blocks: larger resblocks from 256 -> 512 & 512 -> 512
+        # conv4 blocks: larger resblocks from 512 -> 1024 & 1024 -> 1024
+        # conv5 blocks: larger resblocks from 1024 -> 2048 & 2048 -> 2048
         for ix1, num_blocks in enumerate(num_blocks_list):
             conv_blocks = []
             if ix1 == 0:
@@ -166,17 +199,17 @@ class LargerResNet(nn.Module):
                 conv_blocks.append(nn.MaxPool2d(kernel_size=3, stride=2, padding=1))
 
             for ix2 in range(num_blocks):
-                # first block's stride is 2 to reduce the input size by factor of 2
+                # first block's stride is 2 to reduce the input size by factor of 2 (except first set)
                 this_stride = 2 if (ix1 != 0 and ix2 == 0) else 1
-                # input channels of the second block to final block
-                if ix2 != 0: input_channels = output_channels * 4
+                # input channels starting from the second block to final block
+                if ix2 == 1: input_channels = output_channels * 4
                 # add block to the set 
                 conv_blocks.append(LargerResBlock(input_channels, output_channels, this_stride))
 
             # initialize the set of residual blocks
             setattr(self, f"conv{ix1 + 2}_blocks", nn.Sequential(*conv_blocks))
 
-            # the number of channels for the next round
+            # the number of output channels for the next set of resblocks 
             output_channels *= 2
 
         # 1 fully-connected layer
@@ -195,13 +228,13 @@ class LargerResNet(nn.Module):
         return self.fc(output)
     
 
-class ResNet18Classifier(SmallerResBlock): 
+class ResNet18Classifier(SmallerResNet): 
     """ 18-layer ResNet """
     def __init__(self):
         super().__init__(num_blocks_list=[2, 2, 2, 2])
 
 
-class ResNet34Classifier(SmallerResBlock): 
+class ResNet34Classifier(SmallerResNet): 
     """ 34-layer ResNet """
     def __init__(self):
         super().__init__(num_blocks_list=[3, 4, 6, 3])
@@ -228,8 +261,7 @@ class ResNet152Classifier(LargerResNet):
 if __name__ == "__main__": 
     # this is to check the architecture of the model 
     summary(
-        model=ResNet101Classifier().to(
-            torch.device("cuda") if cuda.is_available() else torch.device("cpu")
-        ), 
+        model=ResNet34Classifier().to(
+            torch.device("cuda") if cuda.is_available() else torch.device("cpu")), 
         input_size=(3, 224, 224)
     )
