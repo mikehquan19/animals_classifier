@@ -25,7 +25,7 @@ class SmallerResBlock(nn.Module):
     def __init__(self, in_channels: int, out_channels: int, stride: int):
         super(SmallerResBlock, self).__init__()
         if stride != 1 and stride != 2: 
-            raise Exception("Number of resblock's strides should be 1 or 2")
+            raise Exception("Number of residual block's strides should be 1 or 2")
         
         # Pre-skip
         self.conv1 = nn.Conv2d(in_channels, out_channels, kernel_size=3, padding=1, stride=stride, bias=False)
@@ -83,7 +83,7 @@ class SmallerResNet(nn.Module):
                 conv_blocks.append(nn.MaxPool2d(kernel_size=3, stride=2, padding=1))
 
             for ix2 in range(num_blocks): 
-                # every set except the first, first block's stride is 2 to reduce the input size by factor of 2
+                # for every set except the first, first block's stride is 2 to reduce the img size by 2
                 stride = 2 if (ix2 == 0 and ix1 != 0) else 1
                 # input channels starting from the second block to final block
                 if ix2 == 1: input_channels = output_channels
@@ -92,6 +92,7 @@ class SmallerResNet(nn.Module):
 
             # initialize the set of residual blocks 
             setattr(self, f"conv{ix1 + 2}_blocks", nn.Sequential(*conv_blocks))
+
             output_channels *= 2 # output channels for the next set of blocks 
         
         # fully-connected layer 
@@ -135,7 +136,7 @@ class LargerResBlock(nn.Module):
     def __init__(self, in_channels, out_channels, stride=1):
         super(LargerResBlock, self).__init__()
         if stride != 1 and stride != 2:
-            raise Exception("Number of resblock's strides should be 1 or 2")
+            raise Exception("Number of residual block's strides should be 1 or 2")
         
         # pre skip-connection convolutional block 
         self.conv_block1 = nn.Sequential(
@@ -156,7 +157,7 @@ class LargerResBlock(nn.Module):
         self.downsample = None
         if in_channels != out_channels * 4:
             self.downsample = nn.Sequential(
-                nn.Conv2d(in_channels, out_channels * 4, 1, stride, bias=False), 
+                nn.Conv2d(in_channels, out_channels * 4, kernel_size=1, stride=stride, bias=False), 
                 nn.BatchNorm2d(num_features=out_channels * 4))
 
     def forward(self, x):
@@ -165,9 +166,7 @@ class LargerResBlock(nn.Module):
 
         # skip connection
         output = self.conv_block3(output)
-        residual = x
-        # apply downsample 
-        if self.downsample: residual = self.downsample(x)
+        residual = self.downsample(x) if self.downsample else x # apply downsample 
         return F.dropout2d(F.relu(output + residual), p=0.2)
 
 
@@ -208,6 +207,7 @@ class LargerResNet(nn.Module):
 
             # initialize the set of residual blocks
             setattr(self, f"conv{ix1 + 2}_blocks", nn.Sequential(*conv_blocks))
+
             # the number of output channels for the next set of resblocks 
             output_channels *= 2
 

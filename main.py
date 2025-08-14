@@ -35,8 +35,11 @@ async def upload_url(request: UploadRequest):
 
     return {
         "status": 200, 
-        "image_url": request.arg_url,
-        "result": animal_prediction
+        "data": {
+            "image_url": request.arg_url,
+            "format": image.format,
+            "result": animal_prediction
+        }
     }
 
 
@@ -44,7 +47,7 @@ async def upload_url(request: UploadRequest):
 async def upload_image(arg_image: UploadFile): 
     """ 
     Upload the image file then predict the animal. 
-    Only files with PNG, JPG, or JPEG extension are accepted
+    Only files with PNG, JPG, JPEG, or WEBP extension are accepted.
     """
     try: 
         image_content = await arg_image.read()
@@ -58,6 +61,9 @@ async def upload_image(arg_image: UploadFile):
     
     return {
         "status": 200, 
-        "filename": arg_image.filename,
-        "result": animal_prediction
+        "data": {
+            "filename": arg_image.filename,
+            "content_type": arg_image.content_type,
+            "result": animal_prediction
+        }
     }

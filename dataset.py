@@ -45,12 +45,12 @@ class AnimalImages(Dataset):
 
         # image transform that applies augmentation 
         self.augmentation_transform = v2.Compose([
-            v2.Resize([self.img_size, self.img_size]),
+            v2.Resize((self.img_size, self.img_size)),
             v2.RandomResizedCrop(
                 size=self.img_size, scale=(0.8, 1.2), ratio=(0.8, 1.2)),
             v2.ColorJitter(brightness=0.1, contrast=0.2, saturation=0.2, hue=0.1),
             v2.RandomHorizontalFlip(),
-            v2.RandomRotation(45), # apply rotation
+            v2.RandomRotation(45), # apply rotation from -45 degrees to 45 degrees
             v2.ToImage(),
             v2.ToDtype(torch.float32, scale=True),
             v2.Normalize(
