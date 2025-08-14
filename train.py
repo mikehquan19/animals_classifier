@@ -116,7 +116,7 @@ if __name__ == "__main__":
 
     # Load the weights as well as state of model and optimizer and schedulers
     if not FIRST_ITERATION: 
-        checkpoint = torch.load('./data/animals_checkpoint.tph')
+        checkpoint = torch.load('./data/animals_checkpoint.pth')
 
         animal_classifier.load_state_dict(checkpoint['model'])
         this_optimizer.load_state_dict(checkpoint['optimizer'])
@@ -143,4 +143,4 @@ if __name__ == "__main__":
         "model": animal_classifier.state_dict(),
         "optimizer": this_optimizer.state_dict(),
         "scheduler": this_scheduler.state_dict()
-    }, './data/animals_checkpoint.tph')
+    }, './data/animals_checkpoint.pth')
