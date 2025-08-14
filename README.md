@@ -5,6 +5,6 @@ It's still in progress as I'm still currently training the models. Weights for R
 
 Resnet-50 achieves the 80.7% val acc
 
-This project primarily uses <strong>Pytorch</strong>.
+This project primarily uses <strong>Pytorch</strong> and <strong>FastAPI</strong>.
 
 Resnet Architecture can be found and explored [here](https://arxiv.org/pdf/1512.03385)
