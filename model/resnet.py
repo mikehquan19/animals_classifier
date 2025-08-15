@@ -117,19 +117,19 @@ class LargerResBlock(nn.Module):
     """
     Architecture of the residual block. The first residual block in ResNet has stride of 2. 
 
-    The resblock (```in_channels -> out_channels * 4```) consists of: 
-        - Convolution layer: ```in_channels -> out_channels```, 
-        - Convolution layer: ```out_channels -> out_channels```, 
-        - Convolution layer: ```out_channels -> out_channels * 4```
+    The resblock (```in_channels -> out_channels```) consists of: 
+        - Convolution layer: ```in_channels -> out_channels / 4```, 
+        - Convolution layer: ```out_channels / 4 -> out_channels / 4```, 
+        - Convolution layer: ```out_channels / 4 -> out_channels```
 
     For example, 
-        - Resblock 64 -> 256, ```in_channels = 64``` & ```out_channels = 64```
-        - Resblock 512 -> 1024, ```in_channels = 512``` & ```out_channels = 256```
-        - Resblock 512 -> 512, ```in_channels = 512``` & ```out_channels = 128```
+        - Resblock 64 -> 256, ```in_channels = 64``` & ```out_channels = 256```
+        - Resblock 512 -> 1024, ```in_channels = 512``` & ```out_channels = 1024```
+        - Resblock 512 -> 512, ```in_channels = 512``` & ```out_channels = 512```
 
     Args: 
         in_channels (int): Channels of the image tensor before feeding it through the resblock.
-        out_channels (int): Channels of image tensor after first convolution layer of the block.
+        out_channels (int): Channels of image tensor after feeding it through the resblock.
         stride (int): Stride for first convolution layer of the block
     """
 
@@ -137,36 +137,38 @@ class LargerResBlock(nn.Module):
         super(LargerResBlock, self).__init__()
         if stride != 1 and stride != 2:
             raise Exception("Number of residual block's strides should be 1 or 2")
+        elif out_channels % 4 != 0: 
+            raise Exception("Invalid output channels")
         
         # pre skip-connection convolutional block 
         self.conv_block1 = nn.Sequential(
-            nn.Conv2d(in_channels, out_channels, kernel_size=1, stride=stride, bias=False), 
-            nn.BatchNorm2d(num_features=out_channels),
+            nn.Conv2d(in_channels, out_channels // 4, kernel_size=1, stride=stride, bias=False), 
+            nn.BatchNorm2d(num_features=out_channels // 4),
             nn.ReLU())
 
         self.conv_block2 = nn.Sequential(
-            nn.Conv2d(out_channels, out_channels, kernel_size=3, padding=1, bias=False),
-            nn.BatchNorm2d(num_features=out_channels), 
+            nn.Conv2d(out_channels // 4, out_channels // 4, kernel_size=3, padding=1, bias=False),
+            nn.BatchNorm2d(num_features=out_channels // 4), 
             nn.ReLU())
 
         self.conv_block3 = nn.Sequential(
-            nn.Conv2d(out_channels, out_channels * 4, kernel_size=1, bias=False),
-            nn.BatchNorm2d(num_features=out_channels * 4))
+            nn.Conv2d(out_channels // 4, out_channels, kernel_size=1, bias=False),
+            nn.BatchNorm2d(num_features=out_channels))
 
         # Downsample 
         self.downsample = None
-        if in_channels != out_channels * 4:
+        if in_channels != out_channels:
             self.downsample = nn.Sequential(
-                nn.Conv2d(in_channels, out_channels * 4, kernel_size=1, stride=stride, bias=False), 
-                nn.BatchNorm2d(num_features=out_channels * 4))
+                nn.Conv2d(in_channels, out_channels, kernel_size=1, stride=stride, bias=False), 
+                nn.BatchNorm2d(num_features=out_channels))
 
     def forward(self, x):
         output = self.conv_block1(x)
         output = self.conv_block2(output)
 
-        # skip connection
+        # residual skip connection
         output = self.conv_block3(output)
-        residual = self.downsample(x) if self.downsample else x # apply downsample 
+        residual = self.downsample(x) if self.downsample else x # apply downsample in case of mismatch
         return F.dropout2d(F.relu(output + residual), p=0.2)
 
 
@@ -178,13 +180,13 @@ class LargerResNet(nn.Module):
     
     def __init__(self, num_blocks_list):
         super(LargerResNet, self).__init__()
-        # Non-properties used for building blocks, initial input and output channels is 64
-        input_channels, output_channels = 64, 64
+        # Non-properties used for building blocks, initial input is 64 and output channels is 256
+        input_channels, output_channels = 64, 256
 
         # conv1 layer: 7x7 convolutional layer with stride 2
         self.conv1 = nn.Sequential(
-            nn.Conv2d(3, output_channels, kernel_size=7, stride=2, padding=3, bias=False),
-            nn.BatchNorm2d(num_features=output_channels), 
+            nn.Conv2d(3, input_channels, kernel_size=7, stride=2, padding=3, bias=False),
+            nn.BatchNorm2d(num_features=input_channels), 
             nn.ReLU())
 
         # conv2 blocks: 3x3 max-pool with stride 2, larger resblocks 64 -> 256 & 256 -> 256
@@ -201,7 +203,7 @@ class LargerResNet(nn.Module):
                 # every set except the first, first block's stride is 2 to reduce the input size by factor of 2
                 this_stride = 2 if (ix1 != 0 and ix2 == 0) else 1
                 # input channels starting from the second block to final block
-                if ix2 == 1: input_channels = output_channels * 4
+                if ix2 == 1: input_channels = output_channels
                 # add block to the set 
                 conv_blocks.append(LargerResBlock(input_channels, output_channels, this_stride))
 
@@ -260,7 +262,7 @@ class ResNet152Classifier(LargerResNet):
 if __name__ == "__main__": 
     # this is to check the architecture of the model 
     summary(
-        model=ResNet34Classifier().to(
+        model=ResNet101Classifier().to(
             torch.device("cuda") if cuda.is_available() else torch.device("cpu")), 
         input_size=(3, 224, 224)
     )
