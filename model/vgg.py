@@ -1,10 +1,8 @@
 # NOTE: The number of params between these layers don't differ significantly
 #       therefore, VGG with more layers don't neccesarily perform better.
 
-import torch
-from torch import nn, cuda
+from torch import nn
 from torch.nn import functional as F
-from torchsummary import summary
 
 class ConvBlock(nn.Module):
     """
@@ -116,12 +114,3 @@ class VGG19Classifier(GenericVGG):
     """ 19-layer VGG """
     def __init__(self):
        super().__init__(num_layers_list=[2, 2, 4, 4, 4])
-
-
-if __name__ == "__main__": 
-    """ This is to check the architecture of the model """ 
-    summary(
-        model=VGG19Classifier().to(
-            torch.device("cuda") if cuda.is_available() else torch.device("cpu")), 
-        input_size=(3, 224, 224)
-    )

@@ -1,8 +1,6 @@
 # THE MODEL
-import torch
-from torch import nn, cuda
+from torch import nn
 from torch.nn import functional as F
-from torchsummary import summary
 
 class SmallerResBlock(nn.Module): 
     """ 
@@ -18,7 +16,7 @@ class SmallerResBlock(nn.Module):
 
     Args: 
         in_channels (int): Channels of the image tensor before feeding it through the resblock.
-        out_channels (int): Channels of image tensor after first convolution layer of the block.
+        out_channels (int): Channels of image tensor after feeding it through the resblock.
         stride (int): Stride for first convolution layer of the block
     """
     
@@ -44,7 +42,7 @@ class SmallerResBlock(nn.Module):
                 nn.BatchNorm2d(num_features=out_channels))
 
     def forward(self, x): 
-        """ Return  """
+        """ Return """
         output = F.relu(self.batch_norm1(self.conv1(x)))
 
         # skip connection 
@@ -63,13 +61,16 @@ class SmallerResNet(nn.Module):
     """
     def __init__(self, num_blocks_list):
         super(SmallerResNet, self).__init__()
-        # Non-properties, used for constructing blocks
+        if len(num_blocks_list) != 4: 
+            raise Exception("Invalid number of residual blocks!")
+
+        # Non-properties, used for constructing blocks, initial number of input and output channels
         input_channels, output_channels = 64, 64
 
         # conv1 layer: 7x7 convolutional layer with stride 2
         self.conv1 = nn.Sequential(
-            nn.Conv2d(3, output_channels, kernel_size=7, stride=2, padding=3, bias=False),
-            nn.BatchNorm2d(num_features=output_channels), 
+            nn.Conv2d(3, input_channels, kernel_size=7, stride=2, padding=3, bias=False),
+            nn.BatchNorm2d(num_features=input_channels), 
             nn.ReLU())
 
         # conv2 blocks: 3x3 max-pool with stride 2, smaller resblocks 64 -> 64
@@ -93,10 +94,11 @@ class SmallerResNet(nn.Module):
             # initialize the set of residual blocks 
             setattr(self, f"conv{ix1 + 2}_blocks", nn.Sequential(*conv_blocks))
 
-            output_channels *= 2 # output channels for the next set of blocks 
+            # output channels for the next set of blocks 
+            if ix1 != len(num_blocks_list) - 1: output_channels *= 2 
         
         # fully-connected layer 
-        self.fc = nn.Linear(input_channels, 10)
+        self.fc = nn.Linear(output_channels, 10) # 10 categories of animal
 
 
     def forward(self, x): 
@@ -156,11 +158,9 @@ class LargerResBlock(nn.Module):
             nn.BatchNorm2d(num_features=out_channels))
 
         # Downsample 
-        self.downsample = None
-        if in_channels != out_channels:
-            self.downsample = nn.Sequential(
-                nn.Conv2d(in_channels, out_channels, kernel_size=1, stride=stride, bias=False), 
-                nn.BatchNorm2d(num_features=out_channels))
+        self.downsample = nn.Sequential(
+            nn.Conv2d(in_channels, out_channels, kernel_size=1, stride=stride, bias=False), 
+            nn.BatchNorm2d(num_features=out_channels)) if in_channels != out_channels else None
 
     def forward(self, x):
         output = self.conv_block1(x)
@@ -176,14 +176,20 @@ class LargerResNet(nn.Module):
     """
     Generic architecture of the model classifying animals' images, based on ResNet 
     Only apply for Resnet50, Resnet101, & Resnet152 
+
+    Args: 
+        num_blocks_list (int): Number of blocks in each set of blocks
     """
     
     def __init__(self, num_blocks_list):
         super(LargerResNet, self).__init__()
-        # Non-properties used for building blocks, initial input is 64 and output channels is 256
+        if len(num_blocks_list) != 4: 
+            raise Exception("Invalid number of set of residual blocks!")
+        # Non-properties used for building blocks, 
+        # Initial input channels is 64 and output channels is 256 for the set of residual blocks
         input_channels, output_channels = 64, 256
 
-        # conv1 layer: 7x7 convolutional layer with stride 2
+        # conv1 layer: 7x7 convolutional layer 3 -> 64 with stride 2
         self.conv1 = nn.Sequential(
             nn.Conv2d(3, input_channels, kernel_size=7, stride=2, padding=3, bias=False),
             nn.BatchNorm2d(num_features=input_channels), 
@@ -209,12 +215,11 @@ class LargerResNet(nn.Module):
 
             # initialize the set of residual blocks
             setattr(self, f"conv{ix1 + 2}_blocks", nn.Sequential(*conv_blocks))
-
             # the number of output channels for the next set of resblocks 
-            output_channels *= 2
+            if ix1 != len(num_blocks_list) - 1: output_channels *= 2
 
         # 1 fully-connected layer
-        self.fc = nn.Linear(input_channels, 10)
+        self.fc = nn.Linear(output_channels, 10)
 
     def forward(self, x):
         # Feed the image to all convolutional layers
@@ -257,12 +262,3 @@ class ResNet152Classifier(LargerResNet):
     """ 152-layer ResNet """ 
     def __init__(self): 
         super().__init__(num_blocks_list=[3, 8, 36, 3])
-
-
-if __name__ == "__main__": 
-    # this is to check the architecture of the model 
-    summary(
-        model=ResNet101Classifier().to(
-            torch.device("cuda") if cuda.is_available() else torch.device("cpu")), 
-        input_size=(3, 224, 224)
-    )
