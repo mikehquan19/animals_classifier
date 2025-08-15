@@ -56,8 +56,8 @@ class SmallerResBlock(nn.Module):
 
 class SmallerResNet(nn.Module): 
     """
-    Generic architecture of the model classifying animals' images using ```SmallerResBlock```
-    Only apply from Resnet-18 & Resnet-34
+    Resnet-based generic architecture of the model classifying animals' images using ```SmallerResBlock```.
+    Only apply from ```Resnet-18 & Resnet-34```
     """
     def __init__(self, num_blocks_list):
         super(SmallerResNet, self).__init__()
@@ -175,8 +175,8 @@ class LargerResBlock(nn.Module):
 
 class LargerResNet(nn.Module):
     """
-    Generic architecture of the model classifying animals' images using ```LargerResBlock```
-    Only apply for Resnet50, Resnet101, & Resnet152 
+    Resnet-based generic architecture of the model classifying animals' images using ```LargerResBlock```.
+    Only apply for ```Resnet50, Resnet101, & Resnet152``` 
 
     Args: 
         num_blocks_list (int): Number of blocks in each set of blocks
@@ -186,6 +186,7 @@ class LargerResNet(nn.Module):
         super(LargerResNet, self).__init__()
         if len(num_blocks_list) != 4: 
             raise Exception("Invalid number of set of residual blocks!")
+        
         # Non-properties used for building blocks, 
         # Initial input channels is 64 and output channels is 256 for the set of residual blocks
         input_channels, output_channels = 64, 256
