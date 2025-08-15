@@ -5,10 +5,8 @@ from dataset import AnimalImages
 from model.resnet import ResNet50Classifier
 
 @torch.no_grad()
-def get_accuracy(arg_model, data_loader, arg_device) -> float:
-    """ 
-    Calculate the accuracy of the model given the data loader 
-    """
+def get_accuracy(arg_model: nn.Module, data_loader: DataLoader, arg_device) -> float:
+    """ Calculate the accuracy of the model given the data loader """
 
     arg_model.eval() # Changing the model to eval mode
     correct_predictions, total_predictions = 0, 0
@@ -26,7 +24,10 @@ def get_accuracy(arg_model, data_loader, arg_device) -> float:
     return round((correct_predictions / total_predictions) * 100, 2)
 
 
-def mini_batch_training(num_epochs, model, loss_fn, optimizer, scheduler, train_data_loader, val_data_loader):
+def mini_batch_training(
+    num_epochs: int, model: nn.Module, loss_fn, optimizer, scheduler, 
+    train_data_loader: DataLoader, val_data_loader: DataLoader
+):
     """ Training loop over the minibatches of the dataset """
     
     device = torch.device("cuda") if cuda.is_available() else torch.device("cpu")
@@ -51,8 +52,8 @@ def mini_batch_training(num_epochs, model, loss_fn, optimizer, scheduler, train_
             optimizer.step()
 
             avg_train_loss += train_loss.item()
+            # The user has an option of not using scheduler to train 
             if scheduler: 
-                # The user has an option of not using scheduler to train 
                 scheduler.step(epoch + batch_ix / len(train_data_loader)) # updates the global LR every batch
     
         # compute train loss 
@@ -81,7 +82,7 @@ def mini_batch_training(num_epochs, model, loss_fn, optimizer, scheduler, train_
 
 
 if __name__ == "__main__":
-    """ This current hyper-parameters achieved 80.7% -> 81.2% val accuracy """
+    """ This current hyper-parameters achieved 80.7% -> 81.2% val accuracy for Resnet-50 """
     # Hyper-parameters
     LEARNING_RATE = 1e-4
     WEIGTH_DECAY = 1e-4
@@ -103,7 +104,7 @@ if __name__ == "__main__":
     animal_classifier = ResNet50Classifier().to(
         torch.device("cuda") if cuda.is_available() else torch.device("cpu"))
     
-    # use ADAMW to auto update the learning rate
+    # use ADAMW to auto update the learning rate (Could also use Adam instead, or even SGD with momentum tbh)
     this_optimizer = optim.AdamW(animal_classifier.parameters(), lr=LEARNING_RATE, weight_decay=WEIGTH_DECAY)
 
     # Scheduler to schedule the global learning rate update periodically

@@ -4,12 +4,12 @@ from PIL import Image, ImageFile
 from io import BytesIO
 from torchvision.transforms import v2
 import torch
-from torch.nn import Module
 from dataset import idx_to_label
 from model.resnet import ResNet50Classifier
 
-
-def predict(arg_model: Module, arg_img: ImageFile) -> str:
+@torch.no_grad()
+def predict(arg_model: torch.nn.Module, arg_img: ImageFile) -> str:
+    """ Predict the image using the model """
     arg_model.eval()
 
     # Convert all the images to RGB to guarantee shape (3, 224, 224)
@@ -39,9 +39,10 @@ if __name__ == "__main__":
     # initialize the model and load the pre-trained weight 
     device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
     animals_classifier = ResNet50Classifier().to(device=device)
-    animals_classifier.load_state_dict(torch.load('./data/animals_checkpoint.pth', map_location=device)["model"])
+    animals_classifier.load_state_dict(
+        torch.load('./data/animals_checkpoint.pth', map_location=device)["model"])
 
-    img_url = "https://wallup.net/wp-content/uploads/2018/10/06/364377-puppies-puppy-baby-dog-dogs-41.jpg"
+    img_url = "PUT YOUR IMAGE URL HERE"
     # Load the image
     response = requests.get(img_url)
     img = Image.open(BytesIO(response.content))
