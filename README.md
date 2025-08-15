@@ -7,4 +7,5 @@ Resnet-50 achieves the 80.7% val acc
 
 This project primarily uses <strong>Pytorch</strong> and <strong>FastAPI</strong>.
 
+VGG Architecture can be found and explored [here](https://arxiv.org/pdf/1409.1556)
 Resnet Architecture can be found and explored [here](https://arxiv.org/pdf/1512.03385)
