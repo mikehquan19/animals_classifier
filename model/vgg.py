@@ -1,4 +1,6 @@
-# THE MODELs
+# NOTE: The number of params between these layers don't differ significantly
+#       therefore, VGG with more layers don't neccesarily perform better.
+
 import torch
 from torch import nn, cuda
 from torch.nn import functional as F
@@ -18,6 +20,7 @@ class ConvBlock(nn.Module):
         in_channels (int): The number of channels of image tensor before feeding them
         out_channels (int): The number of channels of image tensor after feeding them
         num_layers (int): The number of convolutional layers of a block
+        
     """
 
     def __init__(self, in_channels: int, out_channels: int, num_layers: int):
@@ -39,7 +42,7 @@ class ConvBlock(nn.Module):
                 nn.ReLU()))
 
     def forward(self, x):
-        # Feed through the number layers of convolution, dropout, and maxpool
+        # Feed through the number of available layers of convolution, dropout, and maxpool
         output = self.conv_block1(x)
         if self.num_layers >= 2: output = self.conv_block2(output)
         if self.num_layers >= 3: output = self.conv_block3(output)
@@ -84,19 +87,12 @@ class GenericVGG(nn.Module):
         Flatten the image and then 3 fully connected layers 
         """
         output = self.conv1_block(x)
-        output = self.conv2_block(output)
-        output = self.conv3_block(output)
-        output = self.conv4_block(output)
-        output = self.conv5_block(output)
+        output = self.conv5_block(self.conv4_block(self.conv3_block(self.conv2_block(output))))
 
-        # Flatten the image
         output = output.view(output.size(0), -1)
-        output = F.relu(self.fc1(output))
-        output = F.relu(self.fc2(output))
+        output = F.relu(self.fc2(F.relu(self.fc1(output))))
         return self.fc3(output)
     
-# NOTE: The number of params between these layers don't differ significantly
-# therefore, VGG with more layers don't neccesarily perform better.
 
 class VGG11Classifier(GenericVGG): 
     """ 11-layer VGG """
