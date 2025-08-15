@@ -2,7 +2,7 @@ import torch
 from torch import cuda, optim, nn
 from torch.utils.data import DataLoader
 from dataset import AnimalImages
-from model.resnet import ResNet50Classifier
+from model import get_model
 
 @torch.no_grad()
 def get_accuracy(arg_model: nn.Module, data_loader: DataLoader, arg_device) -> float:
@@ -25,9 +25,9 @@ def get_accuracy(arg_model: nn.Module, data_loader: DataLoader, arg_device) -> f
 
 
 def mini_batch_training(
-    num_epochs: int, model: nn.Module, loss_fn, optimizer, scheduler, 
-    train_data_loader: DataLoader, val_data_loader: DataLoader
-):
+    num_epochs: int, model: nn.Module, train_data_loader: DataLoader, val_data_loader: DataLoader, 
+    loss_fn, optimizer, scheduler, 
+) -> tuple:
     """ Training loop over the minibatches of the dataset """
     
     device = torch.device("cuda") if cuda.is_available() else torch.device("cpu")
@@ -83,6 +83,7 @@ def mini_batch_training(
 
 if __name__ == "__main__":
     """ This current hyper-parameters achieved 80.7% -> 81.2% val accuracy for Resnet-50 """
+
     # Hyper-parameters
     LEARNING_RATE = 1e-4
     WEIGTH_DECAY = 1e-4
@@ -97,12 +98,12 @@ if __name__ == "__main__":
     assert len(train_dataset) + len(val_dataset) == 26179
 
     # data loader of the dataset
+    # fix the number of workers based on the machine in which this is trained
     train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True, num_workers=4)
     val_loader = DataLoader(val_dataset, batch_size=BATCH_SIZE, shuffle=False, num_workers=4)
 
     # initialize the model 
-    animal_classifier = ResNet50Classifier().to(
-        torch.device("cuda") if cuda.is_available() else torch.device("cpu"))
+    animal_classifier = get_model("resnet50")
     
     # use ADAMW to auto update the learning rate (Could also use Adam instead, or even SGD with momentum tbh)
     this_optimizer = optim.AdamW(animal_classifier.parameters(), lr=LEARNING_RATE, weight_decay=WEIGTH_DECAY)
@@ -118,7 +119,7 @@ if __name__ == "__main__":
     # Load the weights as well as state of model and optimizer and schedulers
     if not FIRST_ITERATION: 
         checkpoint = torch.load('./data/animals_checkpoint.pth')
-
+        
         animal_classifier.load_state_dict(checkpoint['model'])
         this_optimizer.load_state_dict(checkpoint['optimizer'])
         this_scheduler.load_state_dict(checkpoint['scheduler'])

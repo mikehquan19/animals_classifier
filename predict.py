@@ -4,8 +4,8 @@ from PIL import Image, ImageFile
 from io import BytesIO
 from torchvision.transforms import v2
 import torch
-from dataset import idx_to_label
-from model.resnet import ResNet50Classifier
+from dataset import idx_to_english
+from model import get_model
 
 @torch.no_grad()
 def predict(arg_model: torch.nn.Module, arg_img: ImageFile) -> str:
@@ -26,22 +26,17 @@ def predict(arg_model: torch.nn.Module, arg_img: ImageFile) -> str:
             std=[0.2667, 0.2621, 0.2797])
     ])
 
-    img_tensor = resize_transform(arg_img)
-    img_tensor = img_tensor.unsqueeze(0).to(
+    img_tensor = resize_transform(arg_img).unsqueeze(0).to(
         torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu"))
     _, predicted = torch.max(arg_model(img_tensor), dim=1)
 
-    return idx_to_label[int(predicted.item())]
+    return idx_to_english[int(predicted.item())]
 
 
 if __name__ == "__main__": 
     # For testing 
     # initialize the model and load the pre-trained weight 
-    device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
-    animals_classifier = ResNet50Classifier().to(device=device)
-    animals_classifier.load_state_dict(
-        torch.load('./data/animals_checkpoint.pth', map_location=device)["model"])
-
+    animals_classifier = get_model('resnet50', './data/animals_checkpoint.pth')
     img_url = "PUT YOUR IMAGE URL HERE"
     # Load the image
     response = requests.get(img_url)

@@ -4,18 +4,12 @@ import requests
 from PIL import Image
 import io
 import torch
-from model.resnet import ResNet50Classifier
+from model import get_model
 from predict import predict
 
-# Intialize the app
+# Intialize the app and the model with loaded weights
 app = FastAPI()
-
-# Initialize the model and load weights
-device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
-animals_classifier = ResNet50Classifier().to(device=device)
-animals_classifier.load_state_dict(
-    # Train the model first
-    torch.load('./data/animals_checkpoint.pth', map_location=device)["model"])
+animals_classifier = get_model('resnet50', './data/animals_checkpoint.pth')
 
 class UploadRequest(BaseModel): 
     image_url: str
