@@ -6,11 +6,11 @@ from torchsummary import summary
 
 def get_model(name: str, checkpoint: str | None = None) -> nn.Module: 
     """ 
-    Return the model based on name and load the weights if given the checkpoint
+    Return the model using name and load the pretrained weights if given the checkpoint
 
     Args: 
         name (str): The name of the model
-        checkpoint (str | None): The name of the file from which to load the weights of the model
+        checkpoint (str | None): The name of the file from which to load the pretrained weights
 
     """
 

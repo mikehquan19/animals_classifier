@@ -4,7 +4,7 @@ from torch.nn import functional as F
 
 class SmallerResBlock(nn.Module): 
     """ 
-    Architecture of the residual block used for smaller ResNet
+    Architecture of the residual block with 2 layers used for ```SmallerResNet```
 
     The resblocks (```in_channels -> out_channels```) consists of: 
         - Convolution layer: ```in_channels -> out_channels```, 
@@ -56,7 +56,7 @@ class SmallerResBlock(nn.Module):
 
 class SmallerResNet(nn.Module): 
     """
-    Generic architecture of the model classifying animals' images, based on ResNet 
+    Generic architecture of the model classifying animals' images using ```SmallerResBlock```
     Only apply from Resnet-18 & Resnet-34
     """
     def __init__(self, num_blocks_list):
@@ -79,8 +79,8 @@ class SmallerResNet(nn.Module):
         # conv5 blocks: smaller resblocks from 256 -> 512 & 512 -> 512
         for ix1, num_blocks in enumerate(num_blocks_list): 
             conv_blocks = [] 
-            # max pool for the first set of residual blocks
             if ix1 == 0: 
+                # max pool before the first set of residual blocks
                 conv_blocks.append(nn.MaxPool2d(kernel_size=3, stride=2, padding=1))
 
             for ix2 in range(num_blocks): 
@@ -117,7 +117,8 @@ class SmallerResNet(nn.Module):
 
 class LargerResBlock(nn.Module):
     """
-    Architecture of the residual block. The first residual block in ResNet has stride of 2. 
+    Architecture of the residual block with 3 layers used for ```LargerResNet```. 
+    The first residual block in ResNet has stride of 2. 
 
     The resblock (```in_channels -> out_channels```) consists of: 
         - Convolution layer: ```in_channels -> out_channels / 4```, 
@@ -174,7 +175,7 @@ class LargerResBlock(nn.Module):
 
 class LargerResNet(nn.Module):
     """
-    Generic architecture of the model classifying animals' images, based on ResNet 
+    Generic architecture of the model classifying animals' images using ```LargerResBlock```
     Only apply for Resnet50, Resnet101, & Resnet152 
 
     Args: 

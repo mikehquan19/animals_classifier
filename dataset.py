@@ -1,13 +1,14 @@
 import glob
 import random
 import torch
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import Dataset
 from torchvision.transforms import v2
 from PIL import Image
 from pathlib import Path
 
-label_to_idx = {"cane": 0, "cavallo": 1, "elefante": 2, "farfalla": 3, "gallina": 4, "gatto": 5, "mucca": 6, "pecora": 7, "ragno": 8, "scoiattolo": 9}
-idx_to_label = {0: "dog", 1: "horse", 2: "elephant", 3: "butterfly", 4: "hen", 5: "cat", 6: "cow", 7: "sheep", 8: "spider", 9: "squirrel"}
+# Learn a little bit of Italian here I guess
+italian_to_idx = {"cane": 0, "cavallo": 1, "elefante": 2, "farfalla": 3, "gallina": 4, "gatto": 5, "mucca": 6, "pecora": 7, "ragno": 8, "scoiattolo": 9}
+idx_to_english = {0: "dog", 1: "horse", 2: "elephant", 3: "butterfly", 4: "hen", 5: "cat", 6: "cow", 7: "sheep", 8: "spider", 9: "squirrel"}
 
 class AnimalImages(Dataset):
     """ Dataset of the animal's images """
@@ -46,11 +47,10 @@ class AnimalImages(Dataset):
         # image transform that applies augmentation 
         self.augmentation_transform = v2.Compose([
             v2.Resize((self.img_size, self.img_size)),
-            v2.RandomResizedCrop(
-                size=self.img_size, scale=(0.8, 1.2), ratio=(0.8, 1.2)),
+            v2.RandomResizedCrop(size=self.img_size, scale=(0.8, 1.2), ratio=(0.8, 1.2)),
             v2.ColorJitter(brightness=0.1, contrast=0.2, saturation=0.2, hue=0.1),
             v2.RandomHorizontalFlip(),
-            v2.RandomRotation(45), # apply rotation from -45 degrees to 45 degrees
+            v2.RandomRotation(45), # apply rotation from -45 degrees to 45 degrees, can fix if you want really.
             v2.ToImage(),
             v2.ToDtype(torch.float32, scale=True),
             v2.Normalize(
@@ -93,5 +93,5 @@ class AnimalImages(Dataset):
 
         # Process the images and the labels
         processed_img = resize_transform(img)
-        label_idx = label_to_idx[label]
+        label_idx = italian_to_idx[label]
         return processed_img, label_idx

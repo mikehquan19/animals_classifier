@@ -1,18 +1,19 @@
 # NOTE: The number of params between these layers don't differ significantly
 #       therefore, VGG with more layers don't neccesarily perform better.
+#       And training VGG networks will also be painfully long because of large number of params
 
 from torch import nn
 from torch.nn import functional as F
 
 class ConvBlock(nn.Module):
     """
-    Architecture of the convolutional block. Block can have up to 4 layers
+    Architecture of the convolutional block used for ```GenericVGG```. Block can have up to 4 layers
 
-    The convblocks (```in_channels -> out_channels```) with 4 layers consists of: 
+    The convblocks (```in_channels -> out_channels```) with upt to 4 layers consists of: 
         - Convolution layer: ```in_channels -> out_channels```, 
-        - Convolution layer: ```out_channels -> out_channels```, 
-        - Convolution layer: ```out_channels -> out_channels```, 
-        - Convolution layer: ```out_channels -> out_channels```, 
+        - Convolution layer: ```out_channels -> out_channels``` (optional), 
+        - Convolution layer: ```out_channels -> out_channels``` (optional), 
+        - Convolution layer: ```out_channels -> out_channels``` (optional), 
         
     Args: 
         in_channels (int): The number of channels of image tensor before feeding them
@@ -51,7 +52,8 @@ class ConvBlock(nn.Module):
 
 class GenericVGG(nn.Module):
     """
-    Architecture of the model classifying animals' images.
+    VGG-Based generic architecture of the model classifying animals' images 
+    using ```ConvBlock```.
 
     Args: 
         num_layers_list (int): The list of number of layers of each convolutional block
@@ -64,11 +66,11 @@ class GenericVGG(nn.Module):
         # Non-properties. The initial number of channels to which the image is tranformed from 3 
         input_channels, output_channels = 3, 64
 
-        # conv1 block: block 3 -> 64
-        # conv2 block: block 64 -> 128
-        # conv3 block: block 128 -> 256
-        # conv4 block: block 256 -> 512
-        # conv5 block: block 512 -> 512
+        # conv blocks 3 -> 64
+        # conv2 block 64 -> 128
+        # conv3 block 128 -> 256
+        # conv4 block 256 -> 512
+        # conv5 block 512 -> 512
         for ix, num_layers in enumerate(num_layers_list): 
             setattr(self, f"conv{ix+1}_block", ConvBlock(input_channels, output_channels, num_layers))
             input_channels = output_channels
