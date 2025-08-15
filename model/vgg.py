@@ -6,8 +6,7 @@ from torchsummary import summary
 
 class ConvBlock(nn.Module):
     """
-    Architecture of the convolutional block.
-    Default block has multiple layers of convolution and max pool. Block can have up to 4 layers
+    Architecture of the convolutional block. Block can have up to 4 layers
 
     The convblocks (```in_channels -> out_channels```) with 4 layers consists of: 
         - Convolution layer: ```in_channels -> out_channels```, 
@@ -27,24 +26,24 @@ class ConvBlock(nn.Module):
             raise Exception("The convolutional block should have at max 4 conv layers")
         
         self.num_layers = num_layers
-        # Convolutional layer along with batch normalization 
-        self.conv1 = nn.Sequential(
+        # Convolutional layer along with batch normalization and Relu activation
+        self.conv_block1 = nn.Sequential(
             nn.Conv2d(in_channels, out_channels, kernel_size=3, padding=1, bias=False),
             nn.BatchNorm2d(num_features=out_channels),
             nn.ReLU())
 
         for ix in range(self.num_layers - 1): 
-            setattr(self, f"conv{ix + 2}", nn.Sequential(
+            setattr(self, f"conv_block{ix + 2}", nn.Sequential(
                 nn.Conv2d(out_channels, out_channels, kernel_size=3, padding=1, bias=False),
                 nn.BatchNorm2d(num_features=out_channels), 
                 nn.ReLU()))
 
     def forward(self, x):
-        # Feed through 2 layers of convolution, batchnorm, and dropout
-        output = self.conv1(x)
-        if self.num_layers >= 2: output = self.conv2(output)
-        if self.num_layers >= 3: output = self.conv3(output)
-        if self.num_layers == 4: output = self.conv4(output)
+        # Feed through the number layers of convolution, dropout, and maxpool
+        output = self.conv_block1(x)
+        if self.num_layers >= 2: output = self.conv_block2(output)
+        if self.num_layers >= 3: output = self.conv_block3(output)
+        if self.num_layers == 4: output = self.conv_block4(output)
         # apply the dropout, max pool and return the tensor
         return F.max_pool2d(F.dropout(output, p=0.2), kernel_size=2)
 
@@ -96,6 +95,8 @@ class GenericVGG(nn.Module):
         output = F.relu(self.fc2(output))
         return self.fc3(output)
     
+# NOTE: The number of params between these layers don't differ significantly
+# therefore, VGG with more layers don't neccesarily perform better.
 
 class VGG11Classifier(GenericVGG): 
     """ 11-layer VGG """
