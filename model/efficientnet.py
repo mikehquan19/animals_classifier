@@ -110,17 +110,13 @@ class EfficientNet(nn.Module):
             For example, 
             ```
             {
-                "conv3": { # the conf for the first convolution
-                    "out_channels": 32
-                },  
+                "conv3": {"out_channels": 32}, # the conf for the first convolution
                 "mbconv_blocks": [ # conf for the list of set of mbconv blocks 
                     {"out_channels": 16, "kernel_size": 3, "stride": 1, "num_blocks": 1},
                     ..., 
                     {"out_channels": 100, "kernel_size": 1, "stride": 1, "num_blocks": 3},
                 ],
-                "conv1": { # the conf for the last convolution
-                    "out_channels": 1280
-                } 
+                "conv1": {"out_channels": 1280} # the conf for the last convolution
             }
             ```
     """
@@ -151,7 +147,7 @@ class EfficientNet(nn.Module):
                     kernel_size=config["kernel_size"],
                     stride=config["stride"] if ix2 == 0 else 1, # second to last block's stride = 1
                 ))
-                
+
             setattr(self, f"mbconv{ix1}_blocks", nn.Sequential(*mbConvBlocks))
 
         # Stage 9, the conv1x1 with avg-pooling and fc
