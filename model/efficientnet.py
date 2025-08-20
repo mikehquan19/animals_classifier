@@ -170,20 +170,3 @@ class EfficientNet(nn.Module):
         output = self.pre_fc_block(output)
         output = output.view(output.size(0), -1) # (B, C, 1, 1) => (B, C)
         return self.fc(output)
-    
-
-def efficient_net_b0() -> EfficientNet: 
-    """ Baseline model, EfficientNetB0 """
-    return EfficientNet(efficientnet_b0_conf)
-
-def efficient_net_b1() -> EfficientNet: 
-    """ EfficientNetB1, scaling only the depth from baseline model """
-    return EfficientNet(efficientnet_b1_conf)
-  
-def efficient_net_b2() -> EfficientNet: 
-    """ EfficientNetB2, scaling the width from EfficientNetB1"""
-    return EfficientNet(efficientnet_b2_conf)
-
-def efficient_net_b3() -> EfficientNet: 
-    """ EfficientNetB3, scaling the width from EfficientNetB2 """
-    return EfficientNet(efficientnet_b3_conf)

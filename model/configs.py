@@ -1,3 +1,14 @@
+vgg11_num_layers_list = [1, 1, 2, 2, 2]
+vgg13_num_layers_list = [2, 2, 2, 2, 2]
+vgg16_num_layers_list = [2, 2, 3, 3, 3]
+vgg19_num_layers_list = [2, 2, 4, 4, 4]
+
+resnet18_num_blocks_list=[2, 2, 2, 2]
+resnet34_num_blocks_list=[3, 4, 6, 3]
+resnet50_num_blocks_list=[3, 4, 6, 3]
+resnet101_num_blocks_list=[3, 4, 23, 3]
+resnet152_num_blocks_list=[3, 8, 36, 3]
+
 efficientnet_b0_conf = {
     "conv3": {"out_channels": 32},
     "mbconv_blocks": [

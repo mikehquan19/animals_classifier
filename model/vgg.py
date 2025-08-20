@@ -2,7 +2,7 @@
 #       therefore, VGG with more layers don't neccesarily perform better.
 #       And training VGG networks will also be painfully long because of large number of params
 
-from torch import nn
+from torch import nn, Tensor
 from torch.nn import functional as F
 
 class ConvBlock(nn.Module):
@@ -22,10 +22,10 @@ class ConvBlock(nn.Module):
         
     """
 
-    def __init__(self, in_channels: int, out_channels: int, num_layers: int):
+    def __init__(self, in_channels: int, out_channels: int, num_layers: int) -> None:
         super(ConvBlock, self).__init__()
         if num_layers > 4:
-            raise Exception("The convolutional block should have at max 4 conv layers")
+            raise ValueError("The convolutional block should have at max 4 conv layers")
         
         self.num_layers = num_layers
         # Convolutional layer along with batch normalization and Relu activation
@@ -40,40 +40,44 @@ class ConvBlock(nn.Module):
                 nn.BatchNorm2d(num_features=out_channels), 
                 nn.ReLU()))
 
-    def forward(self, x):
+    def forward(self, x) -> Tensor:
         # Feed through the number of available layers of convolution, dropout, and maxpool
         output = self.conv_block1(x)
         if self.num_layers >= 2: output = self.conv_block2(output)
         if self.num_layers >= 3: output = self.conv_block3(output)
         if self.num_layers == 4: output = self.conv_block4(output)
-        # apply the dropout, max pool and return the tensor
+        # apply the dropout, max pool
         return F.max_pool2d(F.dropout(output, p=0.2), kernel_size=2)
 
 
 class GenericVGG(nn.Module):
     """
-    VGG-Based generic architecture of the model classifying animals' images 
-    using ```ConvBlock```.
+    VGG-Based generic architecture of the model classifying animals' images using ```ConvBlock```.
+
+    Architecture summary: 
+        - Conv1 block 3 -> 64
+        - Conv2 block 64 -> 128
+        - Conv3 block 128 -> 256
+        - Conv4 block 256 -> 512
+        - Conv5 block 512 -> 512
 
     Args: 
         num_layers_list (int): The list of number of layers of each convolutional block
     """
-
-    def __init__(self, num_layers_list):
+    
+    def __init__(self, num_layers_list: list[int]) -> None:
         super(GenericVGG, self).__init__()
         if len(num_layers_list) != 5: 
-            raise Exception("Invalid number of convolutional blocks")
-        # Non-properties. The initial number of channels to which the image is tranformed from 3 
+            raise ValueError("Illegal number of convolutional blocks")
+        
+        # Non-properties. 
+        # The initial number of input and output channels for the model architecture
         input_channels, output_channels = 3, 64
 
-        # conv blocks 3 -> 64
-        # conv2 block 64 -> 128
-        # conv3 block 128 -> 256
-        # conv4 block 256 -> 512
-        # conv5 block 512 -> 512
         for ix, num_layers in enumerate(num_layers_list): 
             setattr(self, f"conv{ix+1}_block", ConvBlock(input_channels, output_channels, num_layers))
             input_channels = output_channels
+            # Output channels doubles until second to last convolutional block
             if ix < len(num_layers_list) - 2: output_channels *= 2
 
         # Fully connected layers (3 layers)
@@ -81,38 +85,15 @@ class GenericVGG(nn.Module):
         self.fc2 = nn.Linear(4096, 4096)
         self.fc3 = nn.Linear(4096, 10) # 10 categories of animals
 
-    def forward(self, x):
-        """ 
-        Feed them the image input through all 5 convolutional blocks. 
-        Flatten the image and then 3 fully connected layers 
-        """
-        output = self.conv1_block(x)
-        output = self.conv5_block(self.conv4_block(self.conv3_block(self.conv2_block(output))))
+    def forward(self, x) -> Tensor:
+        # Feed the image input through all 5 convolutional blocks. 
+        for i in range(5): 
+            if i == 0:  
+                output = getattr(self, f"conv{i + 1}_block")(x)
+            else: 
+                output = getattr(self, f"conv{i + 1}_block")(output)
 
+        # Then Ffatten the image and then 3 fully connected layers
         output = output.view(output.size(0), -1)
         output = F.relu(self.fc2(F.relu(self.fc1(output))))
         return self.fc3(output)
-    
-
-class VGG11Classifier(GenericVGG): 
-    """ 11-layer VGG """
-    def __init__(self):
-       super().__init__(num_layers_list=[1, 1, 2, 2, 2])
-
-
-class VGG13Classifier(GenericVGG): 
-    """ 13-layer VGG """
-    def __init__(self):
-       super().__init__(num_layers_list=[2, 2, 2, 2, 2])
-
-
-class VGG16Classifier(GenericVGG): 
-    """ 16-layer VGG """
-    def __init__(self): 
-        super().__init__(num_layers_list=[2, 2, 3, 3, 3])
-
-
-class VGG19Classifier(GenericVGG): 
-    """ 19-layer VGG """
-    def __init__(self):
-       super().__init__(num_layers_list=[2, 2, 4, 4, 4])
