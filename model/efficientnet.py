@@ -5,7 +5,7 @@ from typing import Any
 from configs import *
 
 
-class SqueezeActivation(nn.Module): 
+class SEBlock(nn.Module): 
     """
     Architecture of squeeze and activation block (SE)
     - Reading for [Squeeze and Excitation (SE)](https://towardsdatascience.com/introduction-to-squeeze-excitation-networks-f22ce3a43348/)
@@ -81,7 +81,7 @@ class MBConvBlock(nn.Module):
             nn.SiLU())
  
         # SE block, reduction rate generally used for EfficientNet family = 4
-        self.se = SqueezeActivation(in_channels, scale, 4)
+        self.se = SEBlock(in_channels, scale, 4)
 
         # Last pointwise convolution 
         self.pointwise_conv_without_activation = nn.Sequential(
