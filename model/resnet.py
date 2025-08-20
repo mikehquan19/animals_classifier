@@ -96,7 +96,6 @@ class SmallerResNet(nn.Module):
 
             # initialize the set of residual blocks 
             setattr(self, f"conv{ix1 + 2}_blocks", nn.Sequential(*conv_blocks))
-
             # output channels for the next set of blocks 
             if ix1 != len(num_blocks_list) - 1: output_channels *= 2 
         
@@ -138,7 +137,6 @@ class LargerResBlock(nn.Module):
 
     def __init__(self, in_channels: int, out_channels: int, stride: int=1) -> None:
         super(LargerResBlock, self).__init__()
-
         if not 1 <= stride <= 2:
             raise Exception("Number of residual block's strides should be 1 or 2")
         elif out_channels % 4 != 0: 

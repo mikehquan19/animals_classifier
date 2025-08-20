@@ -151,12 +151,11 @@ class EfficientNet(nn.Module):
                     kernel_size=config["kernel_size"],
                     stride=config["stride"] if ix2 == 0 else 1, # second to last block's stride = 1
                 ))
-
+                
             setattr(self, f"mbconv{ix1}_blocks", nn.Sequential(*mbConvBlocks))
 
         # Stage 9, the conv1x1 with avg-pooling and fc
         input_channels, output_channels = output_channels, self.configs["conv1"]["out_channels"]
-
         self.pre_fc_block = nn.Sequential(
             nn.Conv2d(input_channels, output_channels, 1, bias=False),
             nn.BatchNorm2d(output_channels), 
