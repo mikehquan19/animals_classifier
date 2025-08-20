@@ -53,7 +53,6 @@ class MBConvBlock(nn.Module):
         self, scale: int, in_channels: int, out_channels: int, kernel_size: int, stride: int
     ) -> None: 
         super().__init__()
-
         if scale not in [1, 6]: 
             raise ValueError("Illegal scale, must be either 1 or 6.")
         if kernel_size not in [3, 5]: 
@@ -104,21 +103,24 @@ class MBConvBlock(nn.Module):
 
 class EfficientNet(nn.Module): 
     """ 
-    [EfficientNet](https://arxiv.org/pdf/1905.11946)'s architecture, the pinnacle of 
-    image classification architectures (sort of).
+    [EfficientNet](https://arxiv.org/pdf/1905.11946)'s architecture, the pinnacle of image classification architectures (sort of).
 
     Args: 
         configs (Any): The configuration for the architecture of the model 
             For example, 
             ```
             {
-                "conv3": {"out_channels": 32},
-                "mbconv_blocks": [
+                "conv3": { # the conf for the first convolution
+                    "out_channels": 32
+                },  
+                "mbconv_blocks": [ # conf for the list of set of mbconv blocks 
                     {"out_channels": 16, "kernel_size": 3, "stride": 1, "num_blocks": 1},
                     ..., 
                     {"out_channels": 100, "kernel_size": 1, "stride": 1, "num_blocks": 3},
                 ],
-                "conv1": {"out_channels": 1280}
+                "conv1": { # the conf for the last convolution
+                    "out_channels": 1280
+                } 
             }
             ```
     """
@@ -126,7 +128,6 @@ class EfficientNet(nn.Module):
     def __init__(self, configs: Any) -> None: 
         super().__init__()
         self.configs = configs
-
         # Non-properties, the initial input and output channels of the model 
         input_channels, output_channels = 3, self.configs["conv3"]["out_channels"]
 
@@ -145,11 +146,12 @@ class EfficientNet(nn.Module):
                 if ix2 == 0: output_channels = config["out_channels"] 
 
                 mbConvBlocks.append(MBConvBlock(
-                    1 if ix1 == 0 else 6, # first set is MBConv1, other sets are MBConv6
-                    input_channels, output_channels, 
-                    config["kernel_size"],
-                    config["stride"] if ix2 == 0 else 1, # second to last block's stride = 1
+                    scale=1 if ix1 == 0 else 6, # first set is MBConv1, other sets are MBConv6
+                    in_channels=input_channels, out_channels=output_channels, 
+                    kernel_size=config["kernel_size"],
+                    stride=config["stride"] if ix2 == 0 else 1, # second to last block's stride = 1
                 ))
+
             setattr(self, f"mbconv{ix1}_blocks", nn.Sequential(*mbConvBlocks))
 
         # Stage 9, the conv1x1 with avg-pooling and fc
@@ -160,7 +162,7 @@ class EfficientNet(nn.Module):
             nn.BatchNorm2d(output_channels), 
             nn.SiLU(),
             nn.AdaptiveAvgPool2d(1))
-        self.fc = nn.Linear(output_channels, 1000)
+        self.fc = nn.Linear(output_channels, 10)
 
     def forward(self, x) -> Tensor: 
         output = self.conv1(x)
