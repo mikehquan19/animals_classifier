@@ -159,7 +159,7 @@ class EfficientNet(nn.Module):
         self.fc = nn.Linear(output_channels, 10)
 
     def forward(self, x) -> Tensor: 
-        output = F.dropout(self.conv1(x), p=0.2)
+        output = F.dropout2d(self.conv1(x), p=0.2)
         for ix in range(len(self.configs["mbconv_blocks"])):
             output = getattr(self, f"mbconv{ix}_blocks")(output)
 
