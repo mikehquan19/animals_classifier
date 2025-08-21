@@ -24,29 +24,29 @@ class ConvBlock(nn.Module):
 
     def __init__(self, in_channels: int, out_channels: int, num_layers: int) -> None:
         super(ConvBlock, self).__init__()
+
         if num_layers > 4:
             raise ValueError("The convolutional block should have at max 4 conv layers")
         
         self.num_layers = num_layers
         # Convolutional layer along with batch normalization and Relu activation
-        self.conv_block1 = nn.Sequential(
+        self.conv1 = nn.Sequential(
             nn.Conv2d(in_channels, out_channels, kernel_size=3, padding=1, bias=False),
             nn.BatchNorm2d(num_features=out_channels),
             nn.ReLU())
 
         for ix in range(self.num_layers - 1): 
-            setattr(self, f"conv_block{ix + 2}", nn.Sequential(
+            setattr(self, f"conv{ix + 2}", nn.Sequential(
                 nn.Conv2d(out_channels, out_channels, kernel_size=3, padding=1, bias=False),
                 nn.BatchNorm2d(num_features=out_channels), 
                 nn.ReLU()))
 
     def forward(self, x) -> Tensor:
         # Feed through the number of available layers of convolution, dropout, and maxpool
-        output = self.conv_block1(x)
-        if self.num_layers >= 2: output = self.conv_block2(output)
-        if self.num_layers >= 3: output = self.conv_block3(output)
-        if self.num_layers == 4: output = self.conv_block4(output)
-        # apply the dropout, max pool
+        output = self.conv1(x)
+        for ix in range(self.num_layers - 1): 
+            output = getattr(self, f"conv{ix + 2}")(output)
+        # Apply the dropout, max pool
         return F.max_pool2d(F.dropout(output, p=0.2), kernel_size=2)
 
 
@@ -67,6 +67,7 @@ class GenericVGG(nn.Module):
     
     def __init__(self, num_layers_list: list[int]) -> None:
         super(GenericVGG, self).__init__()
+        
         if len(num_layers_list) != 5: 
             raise ValueError("Illegal number of convolutional blocks")
         
@@ -95,5 +96,6 @@ class GenericVGG(nn.Module):
 
         # Then Ffatten the image and then 3 fully connected layers
         output = output.view(output.size(0), -1)
-        output = F.relu(self.fc2(F.relu(self.fc1(output))))
+        output = F.dropout2d(F.relu(self.fc1(output)), p=0.2)
+        output = F.dropout2d(F.relu(self.fc2(output)), p=0.2) 
         return self.fc3(output)

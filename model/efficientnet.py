@@ -1,5 +1,7 @@
 # TODO: Get in the theoretical details of Depthwise Convolution and SE blocks
 from torch import nn, Tensor
+from torch.nn import functional as F
+from torchvision.ops import stochastic_depth
 from torchsummary import summary
 from typing import Any
 from configs import *
@@ -62,10 +64,8 @@ class MBConvBlock(nn.Module):
         super().__init__()
 
         if scale not in [1, 6]: 
-            raise ValueError("Illegal scale, must be either 1 or 6.")
-        elif kernel_size not in [3, 5]: 
-            raise ValueError("Illegal kernel_size, must be either 3 or 5.")
-        elif not 1 <= stride <= 2: 
+            raise ValueError("Illegal channels scale, must be either 1 or 6.")
+        if not 1 <= stride <= 2: 
             raise ValueError("Illegal stride, must be either 1 or 2.")
 
         # In MBConv, we only apply skip connection if we can directly without need of downsampling
@@ -91,7 +91,7 @@ class MBConvBlock(nn.Module):
             nn.SiLU())
  
         # SE block, reduction rate generally used for EfficientNet family = 4
-        self.se = SEBlock(in_channels, scale, 4)
+        self.squeeze_and_excitation = SEBlock(in_channels, scale, 4)
 
         # Last pointwise convolution 
         self.pointwise_conv_without_activation = nn.Sequential(
@@ -105,9 +105,11 @@ class MBConvBlock(nn.Module):
         else: 
             output = self.depthwise_conv(x)
 
-        output = self.se(output)
+        output = self.squeeze_and_excitation(output)
         output = self.pointwise_conv_without_activation(output)
-        if self.skip_connect: output = output + x
+        if self.skip_connect: 
+            # Apply stochastic depth which helps with regularization like dropout 
+            output = stochastic_depth(output, 0.2, "row", self.training) + x
         return output
 
 
@@ -134,36 +136,33 @@ class EfficientNet(nn.Module):
 
         # Stage 2 -> 8, each is a set of MB convolution blocks
         for ix1, config in enumerate(self.configs["mbconv_blocks"]): 
-            mbConvBlocks = []
+            mb_conv_blocks = []
             for ix2 in range(config["num_blocks"]):
                 input_channels = output_channels 
                 # The output channels change for first block in every set of blocks 
                 if ix2 == 0: output_channels = config["out_channels"] 
-                # First set is MBConv1, other sets are MBConv6
-                this_scale = 1 if ix1 == 0 else 6 
-                # First block's stride follows the architecture, others' stride is 1
-                this_stride = config["stride"] if ix2 == 0 else 1 
 
-                mbConvBlocks.append(MBConvBlock(
-                    this_scale, input_channels, output_channels, config["kernel_size"], this_stride
+                mb_conv_blocks.append(MBConvBlock(
+                    1 if ix1 == 0 else 6, # First set is MBConv1, other sets are MBConv6
+                    input_channels, output_channels, config["kernel_size"], 
+                    config["stride"] if ix2 == 0 else 1 # Only first block's stride follows the architecture
                 ))
 
-            setattr(self, f"mbconv{ix1}_blocks", nn.Sequential(*mbConvBlocks))
+            setattr(self, f"mbconv{ix1}_blocks", nn.Sequential(*mb_conv_blocks))
 
-        # Stage 9, the conv1x1 with avg-pooling and fc
+        # Stage 9, the conv1x1 with avg-pooling and fully-connected 
         input_channels, output_channels = output_channels, self.configs["conv1"]["out_channels"]
-        self.pre_fc_block = nn.Sequential(
+        self.conv9 = nn.Sequential(
             nn.Conv2d(input_channels, output_channels, 1, bias=False),
             nn.BatchNorm2d(output_channels), 
-            nn.SiLU(),
-            nn.AdaptiveAvgPool2d(1))
+            nn.SiLU())
         self.fc = nn.Linear(output_channels, 10)
 
     def forward(self, x) -> Tensor: 
-        output = self.conv1(x)
+        output = F.dropout(self.conv1(x), p=0.2)
         for ix in range(len(self.configs["mbconv_blocks"])):
             output = getattr(self, f"mbconv{ix}_blocks")(output)
 
-        output = self.pre_fc_block(output) # (B, C, H, W) => (B, C, 1, 1)
-        output = output.view(output.size(0), -1) # (B, C, 1, 1) => (B, C)
-        return self.fc(output) # (B, C) => (B, 10)
+        output = F.adaptive_avg_pool2d(self.conv9(output), 1) # (B, C, H, W) => (B, C, 1, 1)
+        output = self.fc(output.view(output.size(0), -1)) # (B, C, 1, 1) => (B, C) => (B, 10)
+        return output

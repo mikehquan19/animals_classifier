@@ -22,8 +22,9 @@ class SmallerResBlock(nn.Module):
     
     def __init__(self, in_channels: int, out_channels: int, stride: int) -> None:
         super(SmallerResBlock, self).__init__()
+
         if stride != 1 and stride != 2: 
-            raise Exception("Number of residual block's strides should be 1 or 2")
+            raise ValueError("Number of residual block's strides should be 1 or 2")
         
         # Pre-skip
         self.conv1 = nn.Conv2d(in_channels, out_channels, kernel_size=3, padding=1, stride=stride, bias=False)
@@ -68,8 +69,9 @@ class SmallerResNet(nn.Module):
     """
     def __init__(self, num_blocks_list: list[int]) -> None:
         super(SmallerResNet, self).__init__()
+
         if len(num_blocks_list) != 4: 
-            raise Exception("Invalid number of residual blocks!")
+            raise ValueError("Invalid number of residual blocks!")
 
         # Non-properties, used for constructing blocks, initial number of input and output channels
         input_channels, output_channels = 64, 64
@@ -84,8 +86,7 @@ class SmallerResNet(nn.Module):
         for ix1, num_blocks in enumerate(num_blocks_list): 
             conv_blocks = [] 
             # max pool before the first set of residual blocks
-            if ix1 == 0: 
-                conv_blocks.append(nn.MaxPool2d(kernel_size=3, stride=2, padding=1))
+            if ix1 == 0: conv_blocks.append(nn.MaxPool2d(kernel_size=3, stride=2, padding=1))
 
             for ix2 in range(num_blocks): 
                 # for every set except the first, first block's stride is 2
@@ -137,23 +138,24 @@ class LargerResBlock(nn.Module):
 
     def __init__(self, in_channels: int, out_channels: int, stride: int=1) -> None:
         super(LargerResBlock, self).__init__()
+
         if not 1 <= stride <= 2:
-            raise Exception("Number of residual block's strides should be 1 or 2")
-        elif out_channels % 4 != 0: 
-            raise Exception("Invalid output channels")
+            raise ValueError("Number of residual block's strides should be 1 or 2")
+        if out_channels % 4 != 0: 
+            raise ValueError("Illegal output channels, must be divisible to 4")
         
         # pre skip-connection convolutional block 
-        self.conv_block1 = nn.Sequential(
+        self.conv1 = nn.Sequential(
             nn.Conv2d(in_channels, out_channels // 4, kernel_size=1, stride=stride, bias=False), 
             nn.BatchNorm2d(num_features=out_channels // 4),
             nn.ReLU())
 
-        self.conv_block2 = nn.Sequential(
+        self.conv2 = nn.Sequential(
             nn.Conv2d(out_channels // 4, out_channels // 4, kernel_size=3, padding=1, bias=False),
             nn.BatchNorm2d(num_features=out_channels // 4), 
             nn.ReLU())
 
-        self.conv_block3 = nn.Sequential(
+        self.conv3 = nn.Sequential(
             nn.Conv2d(out_channels // 4, out_channels, kernel_size=1, bias=False),
             nn.BatchNorm2d(num_features=out_channels))
 
@@ -163,9 +165,7 @@ class LargerResBlock(nn.Module):
             nn.BatchNorm2d(num_features=out_channels)) if in_channels != out_channels else None
 
     def forward(self, x) -> Tensor:
-        output = self.conv_block1(x)
-        output = self.conv_block2(output)
-        output = self.conv_block3(output)
+        output = self.conv3(self.conv2(self.conv1(x)))
 
         # residual skip connection
         residual = self.downsample(x) if self.downsample else x # apply downsample in case of mismatch
@@ -190,8 +190,9 @@ class LargerResNet(nn.Module):
     
     def __init__(self, num_blocks_list: list[int]) -> None:
         super(LargerResNet, self).__init__()
+
         if len(num_blocks_list) != 4: 
-            raise Exception("Invalid number of set of residual blocks!")
+            raise ValueError("Illegal number of set of residual blocks!")
         
         # Non-properties used for building blocks, 
         # Initial input channels is 64 and output channels is 256 for the set of residual blocks
@@ -207,8 +208,7 @@ class LargerResNet(nn.Module):
         for ix1, num_blocks in enumerate(num_blocks_list):
             conv_blocks = []
             # max pool for the first set of residual blocks
-            if ix1 == 0:
-                conv_blocks.append(nn.MaxPool2d(kernel_size=3, stride=2, padding=1))
+            if ix1 == 0: conv_blocks.append(nn.MaxPool2d(kernel_size=3, stride=2, padding=1))
 
             for ix2 in range(num_blocks):
                 # every set except the first, first block's stride is 2 
@@ -226,8 +226,7 @@ class LargerResNet(nn.Module):
         self.fc = nn.Linear(output_channels, 10)
 
     def forward(self, x) -> Tensor:
-        # Feed the image to all convolutional layers
-        output = F.dropout2d(self.conv1(x), p=0.2) # apply dropout 
+        output = F.dropout2d(self.conv1(x), p=0.2) 
         for i in range(4): 
             output = getattr(self, f"conv{i + 2}_blocks")(output)
             
