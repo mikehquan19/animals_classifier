@@ -73,7 +73,7 @@ class MBConvBlock(nn.Module):
         # Pointwise convolution block to expand the channels (only for MBConv6)
         self.point_conv_with_activation = None
         if scale == 6: 
-            self.pointwise_conv_with_activation = nn.Sequential(
+            self.point_conv_with_activation = nn.Sequential(
                 nn.Conv2d(in_channels, in_channels * scale, 1, bias=False),
                 nn.BatchNorm2d(in_channels * scale), 
                 nn.SiLU() # Pytorch's swish activation
