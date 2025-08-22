@@ -37,7 +37,6 @@ class SEBlock(nn.Module):
         )
 
     def forward(self, x) -> Tensor:
-        # squeeze, excitation, and matmul 
         output = self.excitation(self.squeeze(x)) # (B, C, H, W) => (B, C, 1, 1)
         output = x * output # (B, C, H, W) * (B, C, 1, 1) => (B, C, H, W) 
         return output
@@ -72,7 +71,7 @@ class MBConvBlock(nn.Module):
         self.skip_connect = out_channels == in_channels and stride == 1
 
         # Pointwise convolution block to expand the channels (only for MBConv6)
-        self.pointwise_conv_with_activation = None
+        self.point_conv_with_activation = None
         if scale == 6: 
             self.pointwise_conv_with_activation = nn.Sequential(
                 nn.Conv2d(in_channels, in_channels * scale, 1, bias=False),
@@ -80,8 +79,8 @@ class MBConvBlock(nn.Module):
                 nn.SiLU() # Pytorch's swish activation
             ) 
 
-        # Depthwise convolution block
-        self.depthwise_conv = nn.Sequential(
+        # Depthwise convolution block, 3x3 or 5x5
+        self.depth_conv = nn.Sequential(
             nn.Conv2d(
                 in_channels * scale, in_channels * scale, 
                 kernel_size=kernel_size, padding=kernel_size // 2, stride=stride, 
@@ -94,19 +93,20 @@ class MBConvBlock(nn.Module):
         self.squeeze_and_excitation = SEBlock(in_channels, scale, 4)
 
         # Last pointwise convolution 
-        self.pointwise_conv_without_activation = nn.Sequential(
+        self.point_conv_without_activation = nn.Sequential(
             nn.Conv2d(in_channels * scale, out_channels, 1, bias=False), 
             nn.BatchNorm2d(out_channels))
 
     def forward(self, x) -> Tensor: 
-        if self.pointwise_conv_with_activation: 
-            output = self.pointwise_conv_with_activation(x)
-            output = self.depthwise_conv(output)
+        # Feed thru pointwise and depthwise convolution 
+        if self.point_conv_with_activation: 
+            output = self.point_conv_with_activation(x)
+            output = self.depth_conv(output)
         else: 
-            output = self.depthwise_conv(x)
+            output = self.depth_conv(x)
 
         output = self.squeeze_and_excitation(output)
-        output = self.pointwise_conv_without_activation(output)
+        output = self.point_conv_without_activation(output)
         if self.skip_connect: 
             # Apply stochastic depth which helps with regularization like dropout 
             output = stochastic_depth(output, 0.2, "row", self.training) + x
@@ -130,7 +130,7 @@ class EfficientNet(nn.Module):
 
         # Stage 1, the conv3x3
         self.conv1 = nn.Sequential(
-            nn.Conv2d(input_channels, output_channels, 3, padding=1, stride=2, bias=False),
+            nn.Conv2d(input_channels, output_channels, kernel_size=3, padding=1, stride=2, bias=False),
             nn.BatchNorm2d(output_channels),
             nn.SiLU())
 
@@ -145,9 +145,8 @@ class EfficientNet(nn.Module):
                 mb_conv_blocks.append(MBConvBlock(
                     1 if ix1 == 0 else 6, # First set is MBConv1, other sets are MBConv6
                     input_channels, output_channels, config["kernel_size"], 
-                    config["stride"] if ix2 == 0 else 1 # Only first block's stride follows the architecture
-                ))
-
+                    config["stride"] if ix2 == 0 else 1)) # Only first block's stride follows the architecture
+                
             setattr(self, f"mbconv{ix1}_blocks", nn.Sequential(*mb_conv_blocks))
 
         # Stage 9, the conv1x1 with avg-pooling and fully-connected 
