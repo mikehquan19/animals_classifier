@@ -6,6 +6,7 @@ from torchvision.transforms import v2
 import torch
 from dataset import idx_to_english
 from model import get_model
+import argparse
 
 @torch.no_grad()
 def predict(arg_model: torch.nn.Module, arg_img: ImageFile) -> str:
@@ -23,7 +24,8 @@ def predict(arg_model: torch.nn.Module, arg_img: ImageFile) -> str:
         v2.Normalize(
             # the value of mean and stdev of normalization
             mean=[0.5204, 0.5028, 0.4156],
-            std=[0.2667, 0.2621, 0.2797])
+            std=[0.2667, 0.2621, 0.2797]
+        )
     ])
 
     img_tensor = resize_transform(arg_img).unsqueeze(0).to(
@@ -34,13 +36,21 @@ def predict(arg_model: torch.nn.Module, arg_img: ImageFile) -> str:
 
 
 if __name__ == "__main__": 
-    # For testing 
-    # initialize the model and load the pre-trained weight 
-    animals_classifier = get_model('resnet50', './data/animals_checkpoint.pth')
-    img_url = "PUT YOUR IMAGE URL HERE"
+    # For testing, initialize the model and load the pre-trained weight 
+    parser = argparse.ArgumentParser(
+        description="inference from the trained classification model")
+    
+    parser.add_argument("model_name", type=str, help="Name of the model")
+    parser.add_argument("img_url", type=str, help="The image url of the model")
+
+    animals_classifier = get_model(
+        parser.parse_args().model_name, load_state=True
+    )
     # Load the image
-    response = requests.get(img_url)
+    response = requests.get(parser.parse_args().img_url)
     img = Image.open(BytesIO(response.content))
     print(predict(animals_classifier, img))
+
+
 
 
