@@ -9,7 +9,7 @@ from model import get_model
 import argparse
 
 @torch.no_grad()
-def predict(arg_model: torch.nn.Module, arg_img: ImageFile) -> str:
+def inference(arg_model: torch.nn.Module, arg_img: ImageFile) -> str:
     """ Predict the image using the model """
     arg_model.eval()
 
@@ -49,7 +49,7 @@ if __name__ == "__main__":
     # Load the image
     response = requests.get(parser.parse_args().img_url)
     img = Image.open(BytesIO(response.content))
-    print(predict(animals_classifier, img))
+    print(inference(animals_classifier, img))
 
 
 

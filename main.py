@@ -5,7 +5,7 @@ from PIL import Image
 import io
 import torch
 from model import get_model
-from predict import predict
+from inference import inference
 
 # Intialize the app and the model with loaded weights
 app = FastAPI()
@@ -25,7 +25,7 @@ async def upload_url(request: UploadRequest):
             "status": 400, 
             "message": "Image can't be opened, possibly because of invalid URL."
         })
-    animal_prediction = predict(animals_classifier, image)
+    animal_prediction = inference(animals_classifier, image)
 
     return {
         "status": 200, 
@@ -51,7 +51,7 @@ async def upload_image(image_file: UploadFile):
             "status": 400, 
             "message": "Image can't be opened, possibly because of invalid file."
         })
-    animal_prediction = predict(animals_classifier, image)
+    animal_prediction = inference(animals_classifier, image)
     
     return {
         "status": 200, 
