@@ -5,8 +5,9 @@ from resnet import *
 from efficientnet import *
 from configs import *
 from torchsummary import summary
+from typing import Union
 
-def get_model(name: str, checkpoint: str | None = None) -> nn.Module: 
+def get_model(name: str, load_state: bool=False) -> nn.Module: 
     """ 
     Return the model using name and load the pretrained weights if given the checkpoint
 
@@ -47,15 +48,16 @@ def get_model(name: str, checkpoint: str | None = None) -> nn.Module:
     elif name == 'efficientnetb3': 
         model = EfficientNet(efficientnet_b3_conf)
     else: 
-        raise Exception("Invalid model's name! Model is either ResNet, VGG, or EfficientNet and the number of layers must be valid")
+        raise ValueError("Invalid model's name! Model is ResNet, VGG, EfficientNet and the number of layers must be valid")
     
     device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
     model.to(device=device)
-    if checkpoint: 
-        model.load_state_dict(torch.load(checkpoint, map_location=device)["model"])
+    if load_state: 
+        model.load_state_dict(
+            torch.load(f'./data/{name}_checkpoint.pth'), map_location=device)["model"]
     return model
 
 
 if __name__ == "__main__": 
-    """ This is to check the architecture of the model """ 
+    """ This is to check the architecture, and the number of parameters of the model """
     summary(model=get_model("vgg19"), input_size=(3, 224, 224))
